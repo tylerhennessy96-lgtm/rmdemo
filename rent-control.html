@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rent Control — Dynamica SmartRents</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="data.js"></script>
+</head>
+<body>
+<div class="app">
+  <nav class="topnav">
+    <a href="pricing.html" class="logo"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="17" y="1" width="13" height="13" rx="1.5" fill="#e8007d"/><rect x="2" y="16" width="13" height="13" rx="1.5" fill="#f06292"/><rect x="10" y="9" width="12" height="12" rx="1.5" fill="#c4005e" opacity="0.85"/></svg><div style="display:flex;flex-direction:column;line-height:1.1;margin-left:8px;"><span style="font-size:11px;font-weight:500;color:#a0a0a0;letter-spacing:.02em;">Dynamica</span><span style="font-size:13px;font-weight:700;color:#e5e7eb;letter-spacing:.01em;">SmartRents</span></div></a>
+    <div class="nav-tabs"><a href="pricing.html" class="nav-tab">Pricing</a><a href="expiration.html" class="nav-tab">Expiration Management</a><a href="term.html" class="nav-tab">Term Management</a><a href="concessions.html" class="nav-tab">Concession Management</a><a href="rent-control.html" class="nav-tab active">Rent Control</a></div>
+    <div class="nav-divider"></div>
+    <div style="position:relative;"><button class="nav-menu-btn" id="menuBtn" onclick="toggleMenu()"><span></span><span></span><span></span></button><div class="nav-dropdown" id="navDropdown"><a href="parameters.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>Parameters</a><a href="demand.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,12 6,7 9,10 14,4"/></svg>Demand Forecast</a></div></div>
+  </nav>
+  <div class="filter-bar" id="filterBar"></div>
+  <div class="main" style="display:flex;align-items:center;justify-content:center;">
+    <div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--text-muted);">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><rect x="8" y="6" width="32" height="36" rx="3"/><line x1="16" y1="16" x2="32" y2="16"/><line x1="16" y1="22" x2="32" y2="22"/><line x1="16" y1="28" x2="26" y2="28"/><circle cx="34" cy="34" r="6"/><line x1="34" y1="31" x2="34" y2="34"/><circle cx="34" cy="36.5" r=".8" fill="currentColor"/></svg>
+      <div style="font-size:16px;font-weight:600;color:var(--text-secondary);">Rent Control</div>
+      <div style="font-size:13px;text-align:center;max-width:340px;line-height:1.6;">Rent control compliance tracking and management for regulated communities. Coming soon.</div>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center;">
+        <span style="background:rgba(232,0,125,0.08);color:var(--accent);font-size:12px;font-weight:500;border-radius:20px;padding:4px 12px;">Virginia</span>
+        <span style="background:rgba(232,0,125,0.08);color:var(--accent);font-size:12px;font-weight:500;border-radius:20px;padding:4px 12px;">North Carolina</span>
+      </div>
+      <div style="margin-top:16px;padding:14px 20px;background:var(--surface);border-radius:10px;border:1px solid var(--border);max-width:400px;">
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Planned features</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="1.5"><polyline points="2,7 5.5,10.5 12,3"/></svg>Max allowable rent increase tracking</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="1.5"><polyline points="2,7 5.5,10.5 12,3"/></svg>Compliance status by unit (compliant / at risk / breach)</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="1.5"><polyline points="2,7 5.5,10.5 12,3"/></svg>Affordable and Housing Assistance unit management</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="1.5"><polyline points="2,7 5.5,10.5 12,3"/></svg>Renewal offer validation against rent control limits</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="1.5"><polyline points="2,7 5.5,10.5 12,3"/></svg>Regulatory filing date reminders</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleMenu(){document.getElementById('navDropdown').classList.toggle('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.nav-menu-btn')&&!e.target.closest('.nav-dropdown'))document.getElementById('navDropdown').classList.remove('open');});
+
+function buildMultiSelect(c){const w=document.createElement('div');w.className='ms-wrap';w.id='ms-'+c.id;w.innerHTML=`<button class="ms-trigger" onclick="toggleMs('${c.id}')"><span class="ms-label">${c.defaultLabel}</span><svg viewBox="0 0 10 6" width="10" height="6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l4 4 4-4"/></svg></button><div class="ms-dropdown"><div class="ms-search"><input type="text" placeholder="Search..." oninput="filterMsOptions('${c.id}',this.value)"></div><div class="ms-options"><label class="ms-option ms-all"><input type="checkbox" value="__all__" checked onchange="toggleMsAll('${c.id}',this)"> All</label>${c.items.map(i=>`<label class="ms-option"><input type="checkbox" value="${i}" onchange="onMsChange('${c.id}')"> ${i}</label>`).join('')}</div></div>`;return w;}
+function toggleMs(id){document.querySelectorAll('.ms-wrap').forEach(w=>{if(w.id!=='ms-'+id)w.classList.remove('open');});document.getElementById('ms-'+id).classList.toggle('open');}
+function filterMsOptions(id,q){const lo=q.toLowerCase();document.querySelectorAll('#ms-'+id+' .ms-option:not(.ms-all)').forEach(o=>{o.style.display=o.textContent.toLowerCase().includes(lo)?'':'none';});}
+function toggleMsAll(id,cb){document.querySelectorAll('#ms-'+id+' .ms-option:not(.ms-all) input').forEach(c=>c.checked=false);cb.checked=true;onMsChange(id);saveFilterState();updateClearBtn();}
+function onMsChange(id){const w=document.getElementById('ms-'+id);const ac=w.querySelector('.ms-all input');if(![...w.querySelectorAll('.ms-option:not(.ms-all) input')].some(c=>c.checked))ac.checked=true;else ac.checked=false;updateMsLabel(id);saveFilterState();updateClearBtn();}
+function getMsValues(id){const w=document.getElementById('ms-'+id);if(w.querySelector('.ms-all input').checked)return[];return[...w.querySelectorAll('.ms-option:not(.ms-all) input:checked')].map(c=>c.value);}
+function updateMsLabel(id){const w=document.getElementById('ms-'+id);const l=w.querySelector('.ms-label');const d=w.querySelector('.ms-trigger').dataset.default;const v=getMsValues(id);if(!v.length)l.textContent=d;else if(v.length<=2)l.textContent=v.join(', ');else l.textContent=v.length+' '+d.replace('All ','');}
+function saveFilterState(){const s={};['state','metro','community','rm','cd'].forEach(id=>{s[id]=getMsValues(id);});localStorage.setItem('smartrents_filters',JSON.stringify(s));}
+function restoreFilterState(){try{const saved=localStorage.getItem('smartrents_filters');if(!saved)return;const st=JSON.parse(saved);['state','metro','community','rm','cd'].forEach(fid=>{const vals=st[fid];if(!vals||!vals.length)return;const wrap=document.getElementById('ms-'+fid);if(!wrap)return;wrap.querySelectorAll('.ms-options input[type="checkbox"]').forEach(cb=>{if(cb.value==='__all__')return;cb.checked=vals.includes(cb.value);});const allCb=wrap.querySelector('input[value="__all__"]');if(allCb)allCb.checked=false;updateMsLabel(fid);});}catch(e){}}
+function clearAllFilters(){['state','metro','community','rm','cd'].forEach(fid=>{const wrap=document.getElementById('ms-'+fid);if(!wrap)return;wrap.querySelectorAll('.ms-options input').forEach(cb=>cb.checked=false);const allCb=wrap.querySelector('input[value="__all__"]');if(allCb)allCb.checked=true;updateMsLabel(fid);});localStorage.removeItem('smartrents_filters');const btn=document.getElementById('clearFiltersBtn');if(btn)btn.style.display='none';}
+function updateClearBtn(){const has=['state','metro','community','rm','cd'].some(id=>getMsValues(id).length>0);const btn=document.getElementById('clearFiltersBtn');if(btn)btn.style.display=has?'inline-block':'none';}
+function renderPage(){}
+function populateFilters(){const bar=document.getElementById('filterBar');bar.innerHTML='';[{id:'state',defaultLabel:'All States',items:['Texas','Florida','Georgia','North Carolina','Virginia','Arizona','Colorado']},{id:'metro',defaultLabel:'All Metros',items:[...new Set(COMMUNITIES.map(c=>c.metro))]},{id:'community',defaultLabel:'All Communities',items:COMMUNITIES.map(c=>c.name)},{id:'rm',defaultLabel:'All Revenue Managers',items:[...new Set(COMMUNITIES.map(c=>c.rm))]},{id:'cd',defaultLabel:'All Community Directors',items:[...new Set(COMMUNITIES.map(c=>c.cd))]}].forEach(cfg=>{const el=buildMultiSelect(cfg);el.querySelector('.ms-trigger').dataset.default=cfg.defaultLabel;bar.appendChild(el);});const cb=document.createElement('button');cb.id='clearFiltersBtn';cb.onclick=clearAllFilters;cb.style.cssText='display:none;background:none;border:none;color:#6b7280;font-family:DM Sans,sans-serif;font-size:11.5px;cursor:pointer;padding:0 8px;text-decoration:underline;text-underline-offset:2px;white-space:nowrap;';cb.textContent='Clear filters';bar.appendChild(cb);}
+document.addEventListener('click',e=>{if(!e.target.closest('.ms-wrap'))document.querySelectorAll('.ms-wrap').forEach(w=>w.classList.remove('open'));});
+
+populateFilters();restoreFilterState();updateClearBtn();
+</script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parameters — Dynamica SmartRents</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="data.js"></script>
+</head>
+<body>
+<div class="app">
+  <nav class="topnav">
+    <a href="pricing.html" class="logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <rect x="17" y="1" width="13" height="13" rx="1.5" fill="#e8007d"/>
+        <rect x="2" y="16" width="13" height="13" rx="1.5" fill="#f06292"/>
+        <rect x="10" y="9" width="12" height="12" rx="1.5" fill="#c4005e" opacity="0.85"/>
+      </svg>
+      <div style="display:flex;flex-direction:column;line-height:1.1;margin-left:8px;">
+        <span style="font-size:11px;font-weight:500;color:#a0a0a0;letter-spacing:.02em;">Dynamica</span>
+        <span style="font-size:13px;font-weight:700;color:#e5e7eb;letter-spacing:.01em;">SmartRents</span>
+      </div>
+    </a>
+    <div class="nav-tabs">
+      <a href="pricing.html" class="nav-tab">Pricing</a>
+      <a href="expiration.html" class="nav-tab">Expiration Management</a>
+      <a href="term.html" class="nav-tab">Term Management</a>
+      <a href="concessions.html" class="nav-tab">Concession Management</a>
+      <a href="rent-control.html" class="nav-tab">Rent Control</a>
+    </div>
+    <div class="nav-divider"></div>
+    <div style="position:relative;">
+      <button class="nav-menu-btn" id="menuBtn" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+      <div class="nav-dropdown" id="navDropdown">
+        <a href="parameters.html" style="background:var(--row-hover);color:var(--accent);font-weight:600;">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>Parameters</a>
+        <a href="demand.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,12 6,7 9,10 14,4"/></svg>Demand Forecast</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="filter-bar" id="filterBar"></div>
+
+  <div style="display:flex;align-items:center;justify-content:flex-end;padding:6px 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+    <button class="btn-save" id="saveBtn" onclick="saveParams()" style="display:none;">Save changes</button>
+  </div>
+
+  <div class="main">
+    <div class="table-wrap" id="paramTableWrap">
+      <table class="data-table" id="paramTable">
+        <thead>
+          <tr class="param-group-row">
+            <th rowspan="2" style="position:sticky;left:0;z-index:12;background:var(--surface);min-width:180px;">Community</th>
+            <th colspan="3" style="text-align:center;background:rgba(232,0,125,0.08);border-bottom:2px solid rgba(232,0,125,0.2);font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.04em;padding:6px 8px;">Optimization Parameters</th>
+            <th colspan="4" style="text-align:center;background:rgba(248,113,113,0.1);border-bottom:2px solid rgba(248,113,113,0.25);font-size:11px;font-weight:600;color:#b91c1c;letter-spacing:.04em;padding:6px 8px;">Exposure Alerts</th>
+            <th colspan="4" style="text-align:center;background:rgba(245,166,35,0.1);border-bottom:2px solid rgba(245,166,35,0.25);font-size:11px;font-weight:600;color:#92400e;letter-spacing:.04em;padding:6px 8px;">Price to Comp. Corridor</th>
+            <th colspan="3" style="text-align:center;background:rgba(245,166,35,0.08);border-bottom:2px solid rgba(245,166,35,0.2);font-size:11px;font-weight:600;color:#92400e;letter-spacing:.04em;padding:6px 8px;">Concession Alerts</th>
+            <th colspan="4" style="text-align:center;background:var(--surface);border-bottom:2px solid var(--border);font-size:11px;font-weight:600;color:var(--text-secondary);letter-spacing:.04em;padding:6px 8px;">Price Fluctuation</th>
+            <th colspan="6" style="text-align:center;background:var(--surface);border-bottom:2px solid var(--border);font-size:11px;font-weight:600;color:var(--text-secondary);letter-spacing:.04em;padding:6px 8px;">Customer Hold Days</th>
+            <th colspan="2" style="text-align:center;background:var(--surface);border-bottom:2px solid var(--border);font-size:11px;font-weight:600;color:var(--text-secondary);letter-spacing:.04em;padding:6px 8px;">Renewals</th>
+            <th colspan="1" style="text-align:center;background:var(--surface);border-bottom:2px solid var(--border);font-size:11px;font-weight:600;color:var(--text-secondary);letter-spacing:.04em;padding:6px 8px;">Best Price</th>
+          </tr>
+          <tr>
+            <th style="background:rgba(232,0,125,0.05);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Max Price Chg</th>
+            <th style="background:rgba(232,0,125,0.05);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Min Price Chg</th>
+            <th style="background:rgba(232,0,125,0.05);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Unit Group</th>
+            <th style="background:rgba(248,113,113,0.07);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;">Prio 1</th>
+            <th style="background:rgba(248,113,113,0.07);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;">Prio 2</th>
+            <th style="background:rgba(248,113,113,0.07);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;">Max</th>
+            <th style="background:rgba(248,113,113,0.07);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;">Min</th>
+            <th style="background:rgba(245,166,35,0.07);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;">Max</th>
+            <th style="background:rgba(245,166,35,0.07);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;">Min</th>
+            <th style="background:rgba(245,166,35,0.07);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;">Prio 1</th>
+            <th style="background:rgba(245,166,35,0.07);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;">Prio 2</th>
+            <th style="background:rgba(245,166,35,0.05);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Trigger</th>
+            <th style="background:rgba(245,166,35,0.05);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;">LT Low</th>
+            <th style="background:rgba(245,166,35,0.05);font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;">LT Up</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Hold Days</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Down %</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Up %</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Manual</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Free ON</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Free VC</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">ON Max</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">VC Max</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">ON Rec %</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">VC Rec %</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Lead Days</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Rel. Conc.</th>
+            <th style="font-size:10.5px;color:var(--text-muted);font-weight:500;text-align:center;padding:4px 6px;white-space:nowrap;">Inherit</th>
+          </tr>
+        </thead>
+        <tbody id="paramBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let expandedProperties = new Set();
+const paramChanges = {};
+
+function toggleMenu() { document.getElementById('navDropdown').classList.toggle('open'); }
+document.addEventListener('click', e => { if(!e.target.closest('.nav-menu-btn')&&!e.target.closest('.nav-dropdown')) document.getElementById('navDropdown').classList.remove('open'); });
+
+// ── Multi-Select Filters ──────────────────────────────────
+function buildMultiSelect(config) { const wrap=document.createElement('div');wrap.className='ms-wrap';wrap.id='ms-'+config.id;wrap.innerHTML=`<button class="ms-trigger" onclick="toggleMs('${config.id}')"><span class="ms-label">${config.defaultLabel}</span><svg viewBox="0 0 10 6" width="10" height="6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l4 4 4-4"/></svg></button><div class="ms-dropdown"><div class="ms-search"><input type="text" placeholder="Search..." oninput="filterMsOptions('${config.id}',this.value)"></div><div class="ms-options"><label class="ms-option ms-all"><input type="checkbox" value="__all__" checked onchange="toggleMsAll('${config.id}',this)"> All</label>${config.items.map(item=>`<label class="ms-option"><input type="checkbox" value="${item}" onchange="onMsChange('${config.id}')"> ${item}</label>`).join('')}</div></div>`;return wrap; }
+function toggleMs(id){document.querySelectorAll('.ms-wrap').forEach(w=>{if(w.id!=='ms-'+id)w.classList.remove('open');});document.getElementById('ms-'+id).classList.toggle('open');}
+function filterMsOptions(id,q){const lo=q.toLowerCase();document.querySelectorAll('#ms-'+id+' .ms-option:not(.ms-all)').forEach(o=>{o.style.display=o.textContent.toLowerCase().includes(lo)?'':'none';});}
+function toggleMsAll(id,cb){document.querySelectorAll('#ms-'+id+' .ms-option:not(.ms-all) input').forEach(c=>c.checked=false);cb.checked=true;onMsChange(id);saveFilterState(); updateClearBtn();}
+function onMsChange(id){const w=document.getElementById('ms-'+id);const ac=w.querySelector('.ms-all input');if(![...w.querySelectorAll('.ms-option:not(.ms-all) input')].some(c=>c.checked))ac.checked=true;else ac.checked=false;updateMsLabel(id);saveFilterState(); updateClearBtn();renderParamsTable();}
+function getMsValues(id){const w=document.getElementById('ms-'+id);if(w.querySelector('.ms-all input').checked)return[];return[...w.querySelectorAll('.ms-option:not(.ms-all) input:checked')].map(c=>c.value);}
+function updateMsLabel(id){const w=document.getElementById('ms-'+id);const l=w.querySelector('.ms-label');const d=w.querySelector('.ms-trigger').dataset.default;const v=getMsValues(id);if(!v.length)l.textContent=d;else if(v.length<=2)l.textContent=v.join(', ');else l.textContent=v.length+' '+d.replace('All ','');}
+function saveFilterState() {
+  const state = {};
+  ['state','metro','community','rm','cd'].forEach(id => { state[id] = getMsValues(id); });
+  localStorage.setItem('smartrents_filters', JSON.stringify(state));
+}
+
+function restoreFilterState() {
+  try {
+    const saved = localStorage.getItem('smartrents_filters');
+    if (!saved) return;
+    const st = JSON.parse(saved);
+    ['state','metro','community','rm','cd'].forEach(filterId => {
+      const values = st[filterId];
+      if (!values || !values.length) return;
+      const wrap = document.getElementById('ms-' + filterId);
+      if (!wrap) return;
+      wrap.querySelectorAll('.ms-options input[type="checkbox"]').forEach(cb => {
+        if (cb.value === '__all__') return;
+        cb.checked = values.includes(cb.value);
+      });
+      const allCb = wrap.querySelector('input[value="__all__"]');
+      if (allCb) allCb.checked = false;
+      updateMsLabel(filterId);
+    });
+  } catch(e) { console.warn('Could not restore filters:', e); }
+}
+
+function clearAllFilters() {
+  ['state','metro','community','rm','cd'].forEach(filterId => {
+    const wrap = document.getElementById('ms-' + filterId);
+    if (!wrap) return;
+    wrap.querySelectorAll('.ms-options input').forEach(cb => cb.checked = false);
+    const allCb = wrap.querySelector('input[value="__all__"]');
+    if (allCb) allCb.checked = true;
+    updateMsLabel(filterId);
+  });
+  localStorage.removeItem('smartrents_filters');
+  const btn = document.getElementById('clearFiltersBtn');
+  if (btn) btn.style.display = 'none';
+  renderPage();
+}
+
+function updateClearBtn() {
+  const hasFilters = ['state','metro','community','rm','cd'].some(id => getMsValues(id).length > 0);
+  const btn = document.getElementById('clearFiltersBtn');
+  if (btn) btn.style.display = hasFilters ? 'inline-block' : 'none';
+}
+
+function renderPage() { renderParamsTable(); }
+
+function populateFilters(){const bar=document.getElementById('filterBar');bar.innerHTML='';[{id:'state',defaultLabel:'All States',items:['Texas','Florida','Georgia','North Carolina','Virginia','Arizona','Colorado']},{id:'metro',defaultLabel:'All Metros',items:[...new Set(COMMUNITIES.map(c=>c.metro))]},{id:'community',defaultLabel:'All Communities',items:COMMUNITIES.map(c=>c.name)},{id:'rm',defaultLabel:'All Revenue Managers',items:[...new Set(COMMUNITIES.map(c=>c.rm))]},{id:'cd',defaultLabel:'All Community Directors',items:[...new Set(COMMUNITIES.map(c=>c.cd))]}].forEach(cfg=>{const el=buildMultiSelect(cfg);el.querySelector('.ms-trigger').dataset.default=cfg.defaultLabel;bar.appendChild(el);});
+  const clearBtn = document.createElement('button');
+  clearBtn.id = 'clearFiltersBtn';
+  clearBtn.onclick = clearAllFilters;
+  clearBtn.style.cssText = 'display:none;background:none;border:none;color:#6b7280;font-family:DM Sans,sans-serif;font-size:11.5px;cursor:pointer;padding:0 8px;text-decoration:underline;text-underline-offset:2px;white-space:nowrap;';
+  clearBtn.textContent = 'Clear filters';
+  bar.appendChild(clearBtn);
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.ms-wrap'))document.querySelectorAll('.ms-wrap').forEach(w=>w.classList.remove('open'));});
+
+// ── Cell builders ────────────────────────────────────────
+function pInp(val, suffix, key, bg) {
+  const ck = key in paramChanges;
+  const bd = ck ? '2px solid var(--accent)' : '1px solid transparent';
+  return `<input type="text" value="${val}${suffix}" data-key="${key}" onfocus="this.style.border='1px solid var(--accent)';this.style.background='#fff'" onblur="fmtP(this,'${suffix}');this.style.background='transparent'" oninput="onP(this,'${key}','${suffix}')" style="width:52px;text-align:center;border:${bd};border-radius:4px;padding:3px 4px;font-family:'DM Sans',sans-serif;font-size:11.5px;background:transparent;outline:none;color:var(--text-primary);">`;
+}
+function dInp(val, key) {
+  const ck = key in paramChanges;
+  const bd = ck ? '2px solid var(--accent)' : '1px solid transparent';
+  return `<input type="text" value="${val}" data-key="${key}" onfocus="this.style.border='1px solid var(--accent)';this.style.background='#fff'" onblur="this.style.background='transparent';if(!this.dataset.changed)this.style.border='1px solid transparent'" oninput="onD(this,'${key}')" style="width:44px;text-align:center;border:${bd};border-radius:4px;padding:3px 4px;font-family:'DM Sans',sans-serif;font-size:11.5px;background:transparent;outline:none;color:var(--text-primary);">`;
+}
+function selInp(val, key) {
+  return `<select onchange="onS(this,'${key}')" style="border:1px solid transparent;border-radius:4px;padding:2px 4px;font-family:'DM Sans',sans-serif;font-size:11px;background:transparent;outline:none;color:var(--text-primary);cursor:pointer;"><option ${val==='Individual'?'selected':''}>Individual</option><option ${val==='Unit Group'?'selected':''}>Unit Group</option></select>`;
+}
+function togInp(val, key) {
+  return `<label class="toggle" style="margin:0 auto;"><input type="checkbox" ${val?'checked':''} onchange="onT(this,'${key}')"><span class="toggle-slider"></span></label>`;
+}
+
+function onP(input, key, suffix) {
+  const raw = input.value.replace(/[^0-9.\-]/g, '');
+  input.value = raw;
+  paramChanges[key] = parseFloat(raw);
+  input.style.border = '2px solid var(--accent)';
+  input.dataset.changed = 'true';
+  checkSave();
+}
+function fmtP(input, suffix) {
+  const v = parseFloat(input.value.replace(/[^0-9.\-]/g, ''));
+  input.value = isNaN(v) ? '' : v + suffix;
+  if (!input.dataset.changed) input.style.border = '1px solid transparent';
+}
+function onD(input, key) {
+  const v = parseInt(input.value);
+  if (!isNaN(v)) { paramChanges[key] = v; input.style.border = '2px solid var(--accent)'; input.dataset.changed = 'true'; }
+  checkSave();
+}
+function onS(sel, key) { paramChanges[key] = sel.value; checkSave(); renderParamsTable(); }
+function onT(cb, key) { paramChanges[key] = cb.checked; checkSave(); }
+
+function checkSave() {
+  document.getElementById('saveBtn').style.display = Object.keys(paramChanges).length > 0 ? 'inline-flex' : 'none';
+}
+
+// ── Render ───────────────────────────────────────────────
+function toggleProp(id) { if(expandedProperties.has(id))expandedProperties.delete(id);else expandedProperties.add(id);renderParamsTable(); }
+
+function buildRow(p, nameCell, level, commId, btType) {
+  const pfx = commId + '-' + (btType||'property') + '-';
+  const pk = (k) => pfx + k;
+  const pink = level==='property' ? 'rgba(232,0,125,0.05)' : 'rgba(232,0,125,0.03)';
+  const red = level==='property' ? 'rgba(248,113,113,0.07)' : 'rgba(248,113,113,0.04)';
+  const amb = level==='property' ? 'rgba(245,166,35,0.07)' : 'rgba(245,166,35,0.04)';
+  const amb2 = level==='property' ? 'rgba(245,166,35,0.05)' : 'rgba(245,166,35,0.03)';
+  return `${nameCell}
+    <td style="background:${pink};text-align:center;">${pInp(p.maxPriceChange,'%',pk('maxPriceChange'))}</td>
+    <td style="background:${pink};text-align:center;">${pInp(p.minPriceChange,'%',pk('minPriceChange'))}</td>
+    <td style="background:${pink};text-align:center;">${selInp(p.unitGroup,pk('unitGroup'))}</td>
+    <td style="background:${red};text-align:center;">${pInp(p.exposurePrio1,'%',pk('exposurePrio1'))}</td>
+    <td style="background:${red};text-align:center;">${pInp(p.exposurePrio2,'%',pk('exposurePrio2'))}</td>
+    <td style="background:${red};text-align:center;">${pInp(p.exposureMax,'%',pk('exposureMax'))}</td>
+    <td style="background:${red};text-align:center;">${pInp(p.exposureMin,'%',pk('exposureMin'))}</td>
+    <td style="background:${amb};text-align:center;">${pInp(p.compCorrMax,'%',pk('compCorrMax'))}</td>
+    <td style="background:${amb};text-align:center;">${pInp(p.compCorrMin,'%',pk('compCorrMin'))}</td>
+    <td style="background:${amb};text-align:center;">${pInp(p.compCorrPrio1,'%',pk('compCorrPrio1'))}</td>
+    <td style="background:${amb};text-align:center;">${pInp(p.compCorrPrio2,'%',pk('compCorrPrio2'))}</td>
+    <td style="background:${amb2};text-align:center;">${pInp(p.concessionTrigger,'%',pk('concessionTrigger'))}</td>
+    <td style="background:${amb2};text-align:center;">${dInp(p.ltLower,pk('ltLower'))}</td>
+    <td style="background:${amb2};text-align:center;">${dInp(p.ltUpper,pk('ltUpper'))}</td>
+    <td style="text-align:center;">${dInp(p.modelHoldDays,pk('modelHoldDays'))}</td>
+    <td style="text-align:center;">${pInp(p.modelPriceDown,'%',pk('modelPriceDown'))}</td>
+    <td style="text-align:center;">${pInp(p.modelPriceUp,'%',pk('modelPriceUp'))}</td>
+    <td style="text-align:center;">${dInp(p.manualHoldDays,pk('manualHoldDays'))}</td>
+    <td style="text-align:center;">${dInp(p.freeDaysOnNotice,pk('freeDaysOnNotice'))}</td>
+    <td style="text-align:center;">${dInp(p.freeDaysVacant,pk('freeDaysVacant'))}</td>
+    <td style="text-align:center;">${dInp(p.onNoticeMax,pk('onNoticeMax'))}</td>
+    <td style="text-align:center;">${dInp(p.vacantMax,pk('vacantMax'))}</td>
+    <td style="text-align:center;">${pInp(p.onNoticeRecovery,'%',pk('onNoticeRecovery'))}</td>
+    <td style="text-align:center;">${pInp(p.vacantRecovery,'%',pk('vacantRecovery'))}</td>
+    <td style="text-align:center;">${dInp(p.renewalLeadDays,pk('renewalLeadDays'))}</td>
+    <td style="text-align:center;">${pInp(p.relConcession,'%',pk('relConcession'))}</td>
+    <td style="text-align:center;">${togInp(p.inheritBestPrice,pk('inheritBestPrice'))}</td>`;
+}
+
+function renderParamsTable() {
+  const tb = document.getElementById('paramBody');
+  tb.innerHTML = '';
+  const sf=getMsValues('state'),mf=getMsValues('metro'),cf=getMsValues('community'),rf=getMsValues('rm'),df=getMsValues('cd');
+  let data = PARAMETERS_DATA.filter(c=>{
+    if(sf.length&&!sf.includes(c.state))return false;
+    if(mf.length&&!mf.includes(c.metro))return false;
+    if(cf.length&&!cf.includes(c.name))return false;
+    if(rf.length&&!rf.includes(c.rm))return false;
+    if(df.length&&!df.includes(c.cd))return false;
+    return true;
+  });
+
+  data.forEach(comm => {
+    const propOpen = expandedProperties.has(comm.id);
+    const tr = document.createElement('tr');
+    tr.className = 'row-property';
+    const nameCell = `<td style="position:sticky;left:0;background:#fff;z-index:5;font-weight:600;white-space:nowrap;"><button class="expand-btn ${propOpen?'open':''}" onclick="toggleProp('${comm.id}')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,2 8,6 4,10"/></svg></button>${comm.name}</td>`;
+    tr.innerHTML = buildRow(comm.params, nameCell, 'property', comm.id, null);
+    tb.appendChild(tr);
+
+    if (!propOpen) return;
+    comm.bedTypes.forEach(bt => {
+      const btr = document.createElement('tr');
+      btr.className = 'row-bedtype';
+      const btName = `<td style="position:sticky;left:0;background:#fafbfc;padding-left:28px;z-index:5;white-space:nowrap;">${bt.type}</td>`;
+      btr.innerHTML = buildRow(bt.params, btName, 'bedtype', comm.id, bt.type);
+      tb.appendChild(btr);
+    });
+  });
+}
+
+// ── Save ─────────────────────────────────────────────────
+function saveParams() {
+  Object.entries(paramChanges).forEach(([key, val]) => {
+    const parts = key.split('-');
+    const commId = parts[0] + '-' + parts[1];
+    const level = parts[2];
+    const paramKey = parts.slice(3).join('-');
+    const comm = PARAMETERS_DATA.find(c => c.id === commId);
+    if (!comm) return;
+    if (level === 'property') { comm.params[paramKey] = val; }
+    else { const bt = comm.bedTypes.find(b => b.type === level); if (bt) bt.params[paramKey] = val; }
+  });
+  Object.keys(paramChanges).forEach(k => delete paramChanges[k]);
+  document.getElementById('saveBtn').style.display = 'none';
+  renderParamsTable();
+  showToast('Parameters saved successfully');
+}
+
+function showToast(message) {
+  const existing = document.getElementById('toast'); if (existing) existing.remove();
+  const el = document.createElement('div'); el.id = 'toast';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;border:1px solid var(--accent);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:9999;opacity:0;transition:opacity .2s;display:flex;align-items:center;gap:8px;';
+  el.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="2"><polyline points="2,7 5.5,10.5 12,3"/></svg>' + message;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 200); }, 2500);
+}
+
+populateFilters();
+restoreFilterState();
+updateClearBtn();
+renderParamsTable();
+</script>
+</body>
+</html>

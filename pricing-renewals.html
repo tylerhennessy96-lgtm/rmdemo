@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing Renewals — Dynamica SmartRents</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="data.js"></script>
+</head>
+<body>
+<div class="app">
+  <nav class="topnav">
+    <a href="pricing.html" class="logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <rect x="17" y="1" width="13" height="13" rx="1.5" fill="#e8007d"/>
+        <rect x="2" y="16" width="13" height="13" rx="1.5" fill="#f06292"/>
+        <rect x="10" y="9" width="12" height="12" rx="1.5" fill="#c4005e" opacity="0.85"/>
+      </svg>
+      <div style="display:flex;flex-direction:column;line-height:1.1;margin-left:8px;">
+        <span style="font-size:11px;font-weight:500;color:#a0a0a0;letter-spacing:.02em;">Dynamica</span>
+        <span style="font-size:13px;font-weight:700;color:#e5e7eb;letter-spacing:.01em;">SmartRents</span>
+      </div>
+    </a>
+    <div class="nav-tabs">
+      <a href="pricing.html" class="nav-tab active">Pricing</a>
+      <a href="expiration.html" class="nav-tab">Expiration Management</a>
+      <a href="term.html" class="nav-tab">Term Management</a>
+      <a href="concessions.html" class="nav-tab">Concession Management</a>
+      <a href="rent-control.html" class="nav-tab">Rent Control</a>
+    </div>
+    <div class="nav-divider"></div>
+    <div style="position:relative;">
+      <button class="nav-menu-btn" id="menuBtn" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+      <div class="nav-dropdown" id="navDropdown">
+        <a href="parameters.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>Parameters</a>
+        <a href="demand.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,12 6,7 9,10 14,4"/></svg>Demand Forecast</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="filter-bar" id="filterBar"></div>
+
+  <div class="subtab-bar">
+    <a href="pricing.html" class="subtab">New Lease</a>
+    <a href="pricing-renewals.html" class="subtab active">Renewals</a>
+    <div class="subtab-spacer"></div>
+    <button id="pushBtn" onclick="executePush()" style="display:none;align-items:center;gap:6px;padding:6px 14px;border:none;border-radius:var(--radius);background:var(--accent);color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-right:8px;transition:background .15s;" onmouseover="this.style.background='var(--accent-dim)'" onmouseout="this.style.background='var(--accent)'">
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="7" y1="1" x2="7" y2="10"/><polyline points="3,6 7,10 11,6"/><line x1="2" y1="13" x2="12" y2="13"/></svg>
+      Push renewals
+    </button>
+    <button class="btn-adv-filters" onclick="toggleAdvDrawer()">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="4" x2="12" y2="4"/><line x1="4" y1="7" x2="10" y2="7"/><line x1="6" y1="10" x2="8" y2="10"/></svg>
+      Advanced filters
+    </button>
+  </div>
+
+  <!-- Legend -->
+  <div class="status-legend">
+    <span class="status-legend-group">Rent Control:</span>
+    <span class="status-legend-item"><span style="background:#e05252;color:#fff;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">RC</span>Rent Control</span>
+    <span class="status-legend-item"><span style="background:#f5a623;color:#fff;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">AF</span>Affordable</span>
+    <span class="status-legend-item"><span style="background:#60a5fa;color:#1a1d23;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">HA</span>Housing Assistance</span>
+  </div>
+
+  <div class="main">
+    <div class="table-wrap" id="tableWrap">
+      <table class="data-table" id="renewalsTable">
+        <thead>
+          <tr>
+            <th style="min-width:180px;">Property<span class="th-sub">Available/total units</span></th>
+            <th style="width:38px;">RC</th>
+            <th>Lease End</th>
+            <th>Days to<br><span class="th-sub">Lease End</span></th>
+            <th>Days to<br><span class="th-sub">Offer</span></th>
+            <th>Lease ID</th>
+            <th>Lease<br><span class="th-sub">Term</span></th>
+            <th>Lease Price</th>
+            <th>Concs.<br><span class="th-sub">Amt</span></th>
+            <th>Net Eff.<br><span class="th-sub">Lease Price</span></th>
+            <th>Renewal<br><span class="th-sub">Offer Price</span></th>
+            <th>Renewal<br><span class="th-sub">Offer Term</span></th>
+            <th>Renewal Price<br><span class="th-sub">Change (%)</span></th>
+            <th>Delta to New<br><span class="th-sub">Lease (%)</span></th>
+            <th>Status</th>
+            <th>Manual<br><span class="th-sub">Push</span></th>
+          </tr>
+        </thead>
+        <tbody id="renewalsBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Advanced Filters Drawer -->
+    <div class="adv-drawer" id="advDrawer">
+      <div class="adv-drawer-header">
+        <span class="adv-drawer-title">Advanced filters</span>
+        <button class="adv-close" onclick="toggleAdvDrawer()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+        </button>
+      </div>
+      <div class="adv-section" id="statusFilters">
+        <div class="adv-section-title">Renewal Status</div>
+        <label class="ms-option"><input type="checkbox" value="Pending" onchange="renderRenewalsTable()">Pending</label>
+        <label class="ms-option"><input type="checkbox" value="Offer Sent" onchange="renderRenewalsTable()">Offer Sent</label>
+        <label class="ms-option"><input type="checkbox" value="Accepted" onchange="renderRenewalsTable()">Accepted</label>
+        <label class="ms-option"><input type="checkbox" value="Declined" onchange="renderRenewalsTable()">Declined</label>
+        <label class="ms-option"><input type="checkbox" value="Negotiating" onchange="renderRenewalsTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:rgba(167,139,250,0.2);color:#6d28d9;font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">Negotiating</span></span></label>
+      </div>
+      <div class="adv-section" id="rcFilterSection">
+        <div class="adv-section-title">Rent Control Status</div>
+        <label class="ms-option"><input type="checkbox" value="RC" onchange="renderRenewalsTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:#e05252;color:#fff;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;">RC</span>Rent Control</span></label>
+        <label class="ms-option"><input type="checkbox" value="AF" onchange="renderRenewalsTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:#f5a623;color:#fff;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;">AF</span>Affordable</span></label>
+        <label class="ms-option"><input type="checkbox" value="HA" onchange="renderRenewalsTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:#60a5fa;color:#1a1d23;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;">HA</span>Housing Assistance</span></label>
+        <label class="ms-option"><input type="checkbox" value="null" onchange="renderRenewalsTable()">Not Applicable</label>
+      </div>
+      <div class="adv-footer">
+        <button class="btn-apply" onclick="renderRenewalsTable();toggleAdvDrawer()">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Renewal Term Modal -->
+<div class="modal-backdrop" id="renewalTermModal">
+  <div class="modal" style="width:520px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Renewal Terms</div>
+        <div class="modal-subtitle" id="renewalTermUnit"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('renewalTermModal')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;">
+      <table class="modal-table">
+        <thead><tr><th>Term <span class="th-sub">months</span></th><th>Price <span class="th-sub">/month</span></th><th>Concs. Amt.</th><th>Net Eff. Price</th></tr></thead>
+        <tbody id="renewalTermBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('renewalTermModal')">Exit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let expandedRenewalProps = new Set();
+let expandedRenewalBedTypes = {};
+let advDrawerOpen = false;
+
+function toggleMenu(){ document.getElementById('navDropdown').classList.toggle('open'); }
+document.addEventListener('click',e=>{ if(!e.target.closest('.nav-menu-btn')&&!e.target.closest('.nav-dropdown')) document.getElementById('navDropdown').classList.remove('open'); });
+
+// Multi-Select Filters
+function buildMultiSelect(c){const w=document.createElement('div');w.className='ms-wrap';w.id='ms-'+c.id;w.innerHTML=`<button class="ms-trigger" onclick="toggleMs('${c.id}')"><span class="ms-label">${c.defaultLabel}</span><svg viewBox="0 0 10 6" width="10" height="6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l4 4 4-4"/></svg></button><div class="ms-dropdown"><div class="ms-search"><input type="text" placeholder="Search..." oninput="filterMsOptions('${c.id}',this.value)"></div><div class="ms-options"><label class="ms-option ms-all"><input type="checkbox" value="__all__" checked onchange="toggleMsAll('${c.id}',this)"> All</label>${c.items.map(i=>`<label class="ms-option"><input type="checkbox" value="${i}" onchange="onMsChange('${c.id}')"> ${i}</label>`).join('')}</div></div>`;return w;}
+function toggleMs(id){document.querySelectorAll('.ms-wrap').forEach(w=>{if(w.id!=='ms-'+id)w.classList.remove('open');});document.getElementById('ms-'+id).classList.toggle('open');}
+function filterMsOptions(id,q){const lo=q.toLowerCase();document.querySelectorAll('#ms-'+id+' .ms-option:not(.ms-all)').forEach(o=>{o.style.display=o.textContent.toLowerCase().includes(lo)?'':'none';});}
+function toggleMsAll(id,cb){document.querySelectorAll('#ms-'+id+' .ms-option:not(.ms-all) input').forEach(c=>c.checked=false);cb.checked=true;onMsChange(id);saveFilterState(); updateClearBtn();}
+function onMsChange(id){const w=document.getElementById('ms-'+id);const ac=w.querySelector('.ms-all input');if(![...w.querySelectorAll('.ms-option:not(.ms-all) input')].some(c=>c.checked))ac.checked=true;else ac.checked=false;updateMsLabel(id);saveFilterState(); updateClearBtn();renderRenewalsTable();}
+function getMsValues(id){const w=document.getElementById('ms-'+id);if(w.querySelector('.ms-all input').checked)return[];return[...w.querySelectorAll('.ms-option:not(.ms-all) input:checked')].map(c=>c.value);}
+function updateMsLabel(id){const w=document.getElementById('ms-'+id);const l=w.querySelector('.ms-label');const d=w.querySelector('.ms-trigger').dataset.default;const v=getMsValues(id);if(!v.length)l.textContent=d;else if(v.length<=2)l.textContent=v.join(', ');else l.textContent=v.length+' '+d.replace('All ','');}
+function saveFilterState() {
+  const state = {};
+  ['state','metro','community','rm','cd'].forEach(id => { state[id] = getMsValues(id); });
+  localStorage.setItem('smartrents_filters', JSON.stringify(state));
+}
+
+function restoreFilterState() {
+  try {
+    const saved = localStorage.getItem('smartrents_filters');
+    if (!saved) return;
+    const st = JSON.parse(saved);
+    ['state','metro','community','rm','cd'].forEach(filterId => {
+      const values = st[filterId];
+      if (!values || !values.length) return;
+      const wrap = document.getElementById('ms-' + filterId);
+      if (!wrap) return;
+      wrap.querySelectorAll('.ms-options input[type="checkbox"]').forEach(cb => {
+        if (cb.value === '__all__') return;
+        cb.checked = values.includes(cb.value);
+      });
+      const allCb = wrap.querySelector('input[value="__all__"]');
+      if (allCb) allCb.checked = false;
+      updateMsLabel(filterId);
+    });
+  } catch(e) { console.warn('Could not restore filters:', e); }
+}
+
+function clearAllFilters() {
+  ['state','metro','community','rm','cd'].forEach(filterId => {
+    const wrap = document.getElementById('ms-' + filterId);
+    if (!wrap) return;
+    wrap.querySelectorAll('.ms-options input').forEach(cb => cb.checked = false);
+    const allCb = wrap.querySelector('input[value="__all__"]');
+    if (allCb) allCb.checked = true;
+    updateMsLabel(filterId);
+  });
+  localStorage.removeItem('smartrents_filters');
+  const btn = document.getElementById('clearFiltersBtn');
+  if (btn) btn.style.display = 'none';
+  renderPage();
+}
+
+function updateClearBtn() {
+  const hasFilters = ['state','metro','community','rm','cd'].some(id => getMsValues(id).length > 0);
+  const btn = document.getElementById('clearFiltersBtn');
+  if (btn) btn.style.display = hasFilters ? 'inline-block' : 'none';
+}
+
+function renderPage() { renderRenewalsTable(); }
+
+function populateFilters(){const bar=document.getElementById('filterBar');bar.innerHTML='';[{id:'state',defaultLabel:'All States',items:['Texas','Florida','Georgia','North Carolina','Virginia','Arizona','Colorado']},{id:'metro',defaultLabel:'All Metros',items:[...new Set(COMMUNITIES.map(c=>c.metro))]},{id:'community',defaultLabel:'All Communities',items:COMMUNITIES.map(c=>c.name)},{id:'rm',defaultLabel:'All Revenue Managers',items:[...new Set(COMMUNITIES.map(c=>c.rm))]},{id:'cd',defaultLabel:'All Community Directors',items:[...new Set(COMMUNITIES.map(c=>c.cd))]}].forEach(cfg=>{const el=buildMultiSelect(cfg);el.querySelector('.ms-trigger').dataset.default=cfg.defaultLabel;bar.appendChild(el);});
+  const clearBtn = document.createElement('button');
+  clearBtn.id = 'clearFiltersBtn';
+  clearBtn.onclick = clearAllFilters;
+  clearBtn.style.cssText = 'display:none;background:none;border:none;color:#6b7280;font-family:DM Sans,sans-serif;font-size:11.5px;cursor:pointer;padding:0 8px;text-decoration:underline;text-underline-offset:2px;white-space:nowrap;';
+  clearBtn.textContent = 'Clear filters';
+  bar.appendChild(clearBtn);
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.ms-wrap'))document.querySelectorAll('.ms-wrap').forEach(w=>w.classList.remove('open'));});
+
+function toggleAdvDrawer(){ advDrawerOpen=!advDrawerOpen; document.getElementById('advDrawer').classList.toggle('open',advDrawerOpen); }
+
+function getSelectedStatusFilters(){ return[...document.querySelectorAll('#statusFilters input:checked')].map(c=>c.value); }
+function getSelectedRcFilters(){ return[...document.querySelectorAll('#rcFilterSection input:checked')].map(c=>c.value); }
+
+// Render
+function renderRenewalsTable(){
+  const tbody=document.getElementById('renewalsBody');
+  if(!tbody)return;
+  tbody.innerHTML='';
+  if(typeof RENEWALS_DATA==='undefined')return;
+  const sf=getMsValues('state'),mf=getMsValues('metro'),cf=getMsValues('community'),rf=getMsValues('rm'),df=getMsValues('cd');
+  const statusF=getSelectedStatusFilters();
+  const rcF=getSelectedRcFilters();
+
+  let data=RENEWALS_DATA.filter(c=>{
+    if(sf.length&&!sf.includes(c.state))return false;
+    if(mf.length&&!mf.includes(c.metro))return false;
+    if(cf.length&&!cf.includes(c.name))return false;
+    if(rf.length&&!rf.includes(c.rm))return false;
+    if(df.length&&!df.includes(c.cd))return false;
+    return true;
+  });
+
+  const rcCfg={RC:{bg:'#e05252',color:'#fff'},AF:{bg:'#f5a623',color:'#fff'},HA:{bg:'#60a5fa',color:'#1a1d23'}};
+  const stCfg={Pending:{bg:'rgba(245,166,35,0.12)',color:'#92400e'},'Offer Sent':{bg:'rgba(96,165,250,0.12)',color:'#1d4ed8'},Accepted:{bg:'rgba(74,222,128,0.12)',color:'#15803d'},Declined:{bg:'rgba(248,113,113,0.12)',color:'#b91c1c'},Negotiating:{bg:'rgba(167,139,250,0.12)',color:'#6d28d9'}};
+
+  data.forEach(comm=>{
+    const propOpen=expandedRenewalProps.has(comm.id);
+    const total=comm.bedTypes.reduce((s,bt)=>s+bt.renewalUnits.length,0);
+    const tr=document.createElement('tr');tr.className='row-property';
+    tr.innerHTML=`<td><button class="expand-btn ${propOpen?'open':''}" onclick="toggleRenewalProp('${comm.id}')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,2 8,6 4,10"/></svg></button><strong>${comm.name}</strong><span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${total} renewals</span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
+    tbody.appendChild(tr);
+    if(!propOpen)return;
+
+    comm.bedTypes.forEach(bt=>{
+      const btKey=comm.id+bt.type;
+      const btOpen=expandedRenewalBedTypes[btKey];
+      const btr=document.createElement('tr');btr.className='row-bedtype';
+      btr.innerHTML=`<td style="padding-left:28px;"><button class="expand-btn ${btOpen?'open':''}" onclick="toggleRenewalBedType('${btKey}')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,2 8,6 4,10"/></svg></button>${bt.type}<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${bt.renewalUnits.length} units</span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
+      tbody.appendChild(btr);
+      if(!btOpen)return;
+
+      const sorted=[...bt.renewalUnits].sort((a,b)=>a.leaseEndDays-b.leaseEndDays);
+      sorted.forEach(u=>{
+        if(statusF.length&&!statusF.includes(u.status))return;
+        if(rcF.length&&!rcF.includes(u.rcStatus??'null'))return;
+        const rc=u.rcStatus&&rcCfg[u.rcStatus]?`<span style="display:inline-flex;align-items:center;justify-content:center;background:${rcCfg[u.rcStatus].bg};color:${rcCfg[u.rcStatus].color};font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;min-width:20px;">${u.rcStatus}</span>`:'';
+        const daysC=u.leaseEndDays<=30?'#e05252':u.leaseEndDays<=60?'#f5a623':'var(--text-primary)';
+        let dtoDisp;
+        if(u.status==='Offer Sent'||u.status==='Accepted'||u.status==='Declined'||u.status==='Negotiating'){
+          dtoDisp='<span style="color:#60a5fa;font-weight:500;">Sent</span>';
+        } else if(u.daysToOffer>0){
+          const dtc=u.daysToOffer<=7?'#f5a623':'var(--text-secondary)';
+          dtoDisp=`<span style="color:${dtc};">${u.daysToOffer}d</span>`;
+        } else if(u.daysToOffer===0){
+          dtoDisp='<span style="color:var(--accent);font-weight:700;">Now</span>';
+        } else {
+          dtoDisp='<span style="color:#e05252;font-weight:600;">Overdue</span>';
+        }
+        const sc=stCfg[u.status]||{bg:'rgba(0,0,0,0.05)',color:'var(--text-secondary)'};
+        const rpcC=u.renewalPricePct>0?'#e05252':'#15803d';
+        const dlC=u.deltaToNewLease>0?'#e05252':u.deltaToNewLease<0?'#15803d':'var(--text-muted)';
+        const isSel=selectedForPush.has(u.id);
+        const selBg=isSel?'rgba(232,0,125,0.1)':'var(--surface)';
+        const selClr=isSel?'var(--accent)':'var(--text-secondary)';
+        const selBrd=isSel?'var(--accent)':'var(--border-mid)';
+        const selTxt=isSel?'Selected':'Select';
+        const utr=document.createElement('tr');utr.className='row-unit';
+        utr.innerHTML=`
+          <td style="padding-left:44px;font-size:12px;">${u.id}</td>
+          <td style="text-align:center;">${rc}</td>
+          <td>${u.leaseEnd}</td>
+          <td style="color:${daysC};font-weight:500;">${u.leaseEndDays}d</td>
+          <td>${dtoDisp}</td>
+          <td style="font-size:11.5px;color:var(--text-muted);">${u.leaseId}</td>
+          <td style="text-align:center;">${u.leaseTerm}mo</td>
+          <td>$${u.leasePrice.toLocaleString()}</td>
+          <td style="color:var(--text-secondary);">${u.concsAmt>0?'$'+u.concsAmt:'\u2014'}</td>
+          <td>$${u.netEffLeasePrice.toLocaleString()}</td>
+          <td style="color:var(--accent);font-weight:600;">$${u.renewalOfferPrice.toLocaleString()}</td>
+          <td style="text-align:center;"><button onclick="openRenewalTermModal('${u.id}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-weight:600;font-size:12.5px;text-decoration:underline;text-underline-offset:2px;padding:0;">${u.renewalOfferTerm}mo</button></td>
+          <td style="color:${rpcC};font-weight:500;">+${u.renewalPricePct}%</td>
+          <td style="color:${dlC};font-weight:500;">${u.deltaToNewLease>0?'+':''}${u.deltaToNewLease}%</td>
+          <td><span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;background:${sc.bg};color:${sc.color};white-space:nowrap;">${u.status}</span></td>
+          <td style="text-align:center;"><button class="push-select-btn" id="push-${u.id}" onclick="togglePushSelect('${u.id}',this)" style="padding:3px 10px;border-radius:4px;font-size:11px;font-weight:500;font-family:'DM Sans',sans-serif;border:1px solid ${selBrd};background:${selBg};color:${selClr};cursor:pointer;transition:all .15s;white-space:nowrap;">${selTxt}</button></td>`;
+        tbody.appendChild(utr);
+      });
+    });
+  });
+}
+
+function toggleRenewalProp(id){if(expandedRenewalProps.has(id))expandedRenewalProps.delete(id);else expandedRenewalProps.add(id);renderRenewalsTable();}
+function toggleRenewalBedType(key){expandedRenewalBedTypes[key]=!expandedRenewalBedTypes[key];renderRenewalsTable();}
+
+const selectedForPush = new Set();
+
+function togglePushSelect(unitId, btn) {
+  if (selectedForPush.has(unitId)) {
+    selectedForPush.delete(unitId);
+    btn.textContent='Select'; btn.style.background='var(--surface)'; btn.style.color='var(--text-secondary)'; btn.style.borderColor='var(--border-mid)';
+  } else {
+    selectedForPush.add(unitId);
+    btn.textContent='Selected'; btn.style.background='rgba(232,0,125,0.1)'; btn.style.color='var(--accent)'; btn.style.borderColor='var(--accent)';
+  }
+  updatePushButton();
+}
+
+function updatePushButton() {
+  const btn=document.getElementById('pushBtn');
+  const count=selectedForPush.size;
+  if(count>0){ btn.style.display='inline-flex'; btn.innerHTML='<svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="7" y1="1" x2="7" y2="10"/><polyline points="3,6 7,10 11,6"/><line x1="2" y1="13" x2="12" y2="13"/></svg>Push '+count+' renewal'+(count>1?'s':''); }
+  else{ btn.style.display='none'; }
+}
+
+function executePush() {
+  const count=selectedForPush.size;
+  RENEWALS_DATA.forEach(c=>c.bedTypes.forEach(bt=>bt.renewalUnits.forEach(u=>{
+    if(selectedForPush.has(u.id)){ u.status='Offer Sent'; u.daysToOffer=-1; }
+  })));
+  selectedForPush.clear();
+  renderRenewalsTable();
+  updatePushButton();
+  showToast(count+' renewal offer'+(count>1?'s':'')+' pushed successfully');
+}
+
+function showToast(message) {
+  const existing=document.getElementById('toast'); if(existing)existing.remove();
+  const el=document.createElement('div'); el.id='toast';
+  el.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;border:1px solid var(--accent);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:9999;opacity:0;transition:opacity .2s;display:flex;align-items:center;gap:8px;';
+  el.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="2"><polyline points="2,7 5.5,10.5 12,3"/></svg>'+message;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>{el.style.opacity='1';});
+  setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),200);},2500);
+}
+
+// Modal
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-backdrop').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
+
+function openRenewalTermModal(unitId){
+  document.getElementById('renewalTermUnit').textContent=unitId;
+  let unit=null;
+  RENEWALS_DATA.forEach(c=>c.bedTypes.forEach(bt=>{const u=bt.renewalUnits.find(u=>u.id===unitId);if(u)unit=u;}));
+  if(!unit)return;
+  const base=unit.renewalOfferPrice;
+  const rows=[];
+  for(let i=0;i<23;i++){
+    const term=i+2;
+    let prem=0,conc=0;
+    const noise=Math.floor(Math.random()*30)-15;
+    if(term<=5){prem=300+Math.floor(Math.random()*100);conc=0;}
+    else if(term<=8){prem=80+Math.floor(Math.random()*40);conc=100+Math.floor(Math.random()*100);}
+    else if(term<=11){prem=20+Math.floor(Math.random()*30);conc=100+Math.floor(Math.random()*100);}
+    else if(term===12){prem=0;conc=100+Math.floor(Math.random()*100);}
+    else if(term<=18){prem=-(20+Math.floor(Math.random()*30));conc=150+Math.floor(Math.random()*150);}
+    else{prem=-(40+Math.floor(Math.random()*40));conc=150+Math.floor(Math.random()*150);}
+    const price=base+prem+noise;
+    const net=price-conc;
+    const isRec=term===unit.renewalOfferTerm;
+    const rowBg=isRec?' style="background:rgba(232,0,125,0.06);"':'';
+    const recLabel=isRec?'<span style="color:var(--accent);font-size:10px;margin-left:6px;">\u2605 Best</span>':'';
+    rows.push(`<tr${rowBg}><td>${term}${recLabel}</td><td>$${price.toLocaleString()}</td><td>$${conc.toLocaleString()}</td><td>$${net.toLocaleString()}</td></tr>`);
+  }
+  document.getElementById('renewalTermBody').innerHTML=rows.join('');
+  openModal('renewalTermModal');
+}
+
+populateFilters();
+restoreFilterState();
+updateClearBtn();
+renderRenewalsTable();
+</script>
+</body>
+</html>
