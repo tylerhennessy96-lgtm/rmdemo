@@ -322,13 +322,36 @@ function getMarketKPIs(data){
   return{moreAggressive:moreAgg,windsorLeading:leading,mostCommonType:mc?mc[0]:'\u2014',mostCommonPct:mc?Math.round(mc[1]/active.length*100):0,unverified};
 }
 
-// Rent Control — stub
-const RENT_CONTROL_DATA = COMMUNITIES.filter(c => ['Virginia', 'North Carolina'].includes(c.state)).map(c => ({
-  ...c,
-  maxIncrease: 5.0,
-  currentIncrease: (Math.random() * 3 + 1).toFixed(1),
-  status: 'compliant',
-}));
+// Rent Control — full model
+const RC_PROGRAM_TYPES=[{code:'RS',label:'Rent Stabilized',description:'Annual increases set by Rent Guidelines Board',color:'#e8007d',bg:'rgba(232,0,125,0.1)',maxIncrease:{oneYear:2.75,twoYear:5.25},authority:'NYC Rent Guidelines Board'},{code:'RC',label:'Rent Controlled',description:'Maximum Base Rent system, pre-1947 buildings',color:'#e05252',bg:'rgba(248,113,113,0.12)',maxIncrease:{annual:7.5},authority:'NYS DHCR'},{code:'AB',label:'AB 1482',description:'CA Tenant Protection Act: 5% + CPI, max 10%',color:'#f5a623',bg:'rgba(245,166,35,0.12)',maxIncrease:{annual:10},authority:'CA Dept. of Housing'},{code:'S8',label:'Section 8',description:'HUD Housing Choice Voucher',color:'#60a5fa',bg:'rgba(96,165,250,0.12)',maxIncrease:null,authority:'HUD'},{code:'LI',label:'LIHTC',description:'Low Income Housing Tax Credit — rents capped at 30% AMI',color:'#a78bfa',bg:'rgba(167,139,250,0.12)',maxIncrease:null,authority:'IRS / State Housing Agency'},{code:'AF',label:'Affordable',description:'Local affordable housing program',color:'#4ade80',bg:'rgba(74,222,128,0.12)',maxIncrease:null,authority:'Local Housing Authority'},{code:'HA',label:'Housing Assistance',description:'Other government housing assistance',color:'#94a3b8',bg:'rgba(148,163,184,0.12)',maxIncrease:null,authority:'Various'}];
+function getProgramConfig(code){return RC_PROGRAM_TYPES.find(p=>p.code===code)??null;}
+
+const RENT_CONTROL_DATA=COMMUNITIES.map(comm=>{
+  const hasRC=Math.random()>0.3;const cp=PRICING_DATA.find(p=>p.id===comm.id);
+  const commProg=hasRC&&Math.random()>0.5?RC_PROGRAM_TYPES[Math.floor(Math.random()*RC_PROGRAM_TYPES.length)]:null;
+  const fd=d=>(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0')+'/'+String(d.getFullYear()).slice(2);
+  const bedTypes=(cp?.bedTypes??[]).map(bt=>{
+    const btProg=hasRC&&Math.random()>0.6?RC_PROGRAM_TYPES[Math.floor(Math.random()*7)]:null;
+    const units=(bt.units??[]).map(unit=>{
+      const uProg=hasRC&&Math.random()>0.65?RC_PROGRAM_TYPES[Math.floor(Math.random()*7)]:null;
+      const eff=uProg??btProg??commProg??null;
+      const maxInc=eff?.maxIncrease?.annual??eff?.maxIncrease?.oneYear??null;
+      const curInc=parseFloat((Math.random()*8+1).toFixed(1));
+      let cs='N/A',cc='var(--text-muted)';
+      if(eff&&maxInc){if(curInc<=maxInc*0.9){cs='Compliant';cc='#15803d';}else if(curInc<=maxInc){cs='At Limit';cc='#f5a623';}else{cs='Exceeds Limit';cc='#e05252';}}
+      const br=unit.recRent??bt.recRent??1800;const mar=maxInc?Math.round(br*(1+maxInc/100)):null;
+      const rd=new Date(2020,Math.floor(Math.random()*12),Math.floor(Math.random()*28)+1);
+      const nf=new Date(2025,Math.floor(Math.random()*12),Math.floor(Math.random()*28)+1);
+      return{...unit,baseRent:br,unitProgram:uProg,btProgram:btProg,commProgram:commProg,effectiveProgram:eff,maxIncrease:maxInc,currentIncrease:curInc,complianceStatus:cs,complianceColor:cc,maxAllowableRent:mar,registrationDate:eff?fd(rd):null,nextFilingDate:eff?fd(nf):null,notes:null};
+    });
+    const rcu=units.filter(u=>u.effectiveProgram);const ncu=units.filter(u=>u.complianceStatus==='Exceeds Limit');const alu=units.filter(u=>u.complianceStatus==='At Limit');
+    return{...bt,units,btProgram:btProg,rcUnits:rcu.length,totalUnits:units.length,nonCompliantUnits:ncu.length,atLimitUnits:alu.length};
+  });
+  const allU=bedTypes.flatMap(bt=>bt.units);const rcu=allU.filter(u=>u.effectiveProgram);const nc=allU.filter(u=>u.complianceStatus==='Exceeds Limit');const al=allU.filter(u=>u.complianceStatus==='At Limit');
+  return{...comm,commProgram:commProg,bedTypes,allUnits:allU,rcUnitCount:rcu.length,totalUnitCount:allU.length,nonCompliantCount:nc.length,atLimitCount:al.length,hasAnyRC:rcu.length>0};
+});
+
+function getRCKPIs(data){const allU=data.flatMap(c=>c.allUnits);const rcu=allU.filter(u=>u.effectiveProgram);const nc=allU.filter(u=>u.complianceStatus==='Exceeds Limit');const al=allU.filter(u=>u.complianceStatus==='At Limit');const cwrc=data.filter(c=>c.hasAnyRC);const byProg={};rcu.forEach(u=>{const c=u.effectiveProgram.code;byProg[c]=(byProg[c]||0)+1;});return{totalRCUnits:rcu.length,totalUnits:allU.length,nonCompliant:nc.length,atLimit:al.length,commWithRC:cwrc.length,byProgram:byProg};}
 
 // Chart data for exposure panel
 const CHART_MONTHS = ['Jan 25','Feb 25','Mar 25','Apr 25','May 25','Jun 25','Jul 25','Aug 25','Sep 25','Oct 25','Nov 25','Dec 25'];
