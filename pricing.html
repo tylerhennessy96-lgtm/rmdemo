@@ -133,6 +133,7 @@
               <span class="legend-item"><span class="legend-line" style="background:#e8007d"></span>Gross Rent</span>
               <span class="legend-item"><span class="legend-line" style="background:#60a5fa;border-top:2px dashed #60a5fa;height:0;"></span>Net Eff. Rent</span>
               <span class="legend-item"><span class="legend-dot" style="background:#fbbf24"></span>Override</span>
+              <button onclick="toggleUnitPricing()" title="Close panel" style="background:none;border:none;cursor:pointer;color:#6b7280;display:flex;align-items:center;padding:4px 8px;border-radius:4px;margin-left:8px;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
             </div>
           </div>
           <div style="padding:12px 20px;flex:1;overflow:hidden;">
@@ -157,6 +158,7 @@
               <button id="toggleDaily" onclick="setChartMode('daily')" style="padding:3px 10px;border-radius:4px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.15);color:#fff;font-weight:600;">Daily</button>
               <button id="toggleMonthly" onclick="setChartMode('monthly')" style="padding:3px 10px;border-radius:4px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:none;color:#6b7280;font-weight:400;">Monthly</button>
             </div>
+            <button onclick="toggleExposure()" title="Close panel" style="background:none;border:none;cursor:pointer;color:#6b7280;display:flex;align-items:center;padding:4px 8px;border-radius:4px;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg></button>
           </div>
           <div class="exposure-inner">
             <div class="exposure-dates">
@@ -1108,12 +1110,13 @@ function renderStatsBar(filteredData) {
 
 // ── Class Badge ───────────────────────────────────────────
 function classBadge(cls) {
+  const safeCls = (cls === 'A' || cls === 'B') ? cls : 'B';
   const config = {
     A: { bg: 'rgba(245,158,11,0.12)', color: '#92400e', border: 'rgba(245,158,11,0.3)' },
     B: { bg: 'rgba(100,116,139,0.1)', color: '#475569', border: 'rgba(100,116,139,0.25)' },
   };
-  const c = config[cls] ?? config.B;
-  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;font-size:10px;font-weight:800;background:${c.bg};color:${c.color};border:1px solid ${c.border};flex-shrink:0;">${cls}</span>`;
+  const c = config[safeCls];
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;font-size:10px;font-weight:800;background:${c.bg};color:${c.color};border:1px solid ${c.border};flex-shrink:0;">${safeCls}</span>`;
 }
 
 // ── Table Rendering ───────────────────────────────────────
@@ -1191,7 +1194,7 @@ function renderTable() {
         <button class="expand-btn ${propOpen ? 'open' : ''}" onclick="toggleProp('${prop.id}')">
           <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,2 8,6 4,10"/></svg>
         </button>
-        ${classBadge(prop.class)}
+        ${classBadge(prop.class ?? COMMUNITIES.find(c => c.id === prop.id)?.class ?? 'B')}
         <strong style="margin-left:6px;">${prop.name}</strong>
         <button onclick="openCommAttrModal('${prop.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);display:inline-flex;align-items:center;padding:0 4px;vertical-align:middle;" title="View community attributes">
           <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><line x1="7" y1="6" x2="7" y2="10"/><circle cx="7" cy="4.5" r=".6" fill="currentColor"/></svg>
@@ -1656,7 +1659,8 @@ function rebuildLTModal(unit) {
 
   // Layout constants — shared between chart and table
   const labelColW = 130;
-  const dataColW = 80;
+  const isWide = window.innerWidth > 1600;
+  const dataColW = isWide ? 88 : 80;
 
   // Highlights for the recommended term column
   const recColCellBg = 'rgba(232,0,125,0.05)';

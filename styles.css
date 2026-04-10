@@ -1392,3 +1392,22 @@ canvas.chart-canvas { flex: 1; }
 .text-right { text-align: right; }
 .text-muted { color: var(--text-muted); }
 .font-mono { font-family: 'DM Mono', monospace; }
+
+/* ── KPI panel height constraint ─────────────────────────── */
+.exp-kpi-wrap, .unit-pricing-wrap, .exposure-wrap {
+  max-height: 55vh;
+}
+.exp-kpi-panel, .unit-pricing-panel, .exposure-panel {
+  max-height: 55vh;
+}
+.exposure-inner {
+  overflow-y: auto;
+}
+
+/* ── Wide screen optimizations ───────────────────────────── */
+@media (min-width: 1600px) {
+  .filter-bar { gap: 10px; }
+  .nav-tab { font-size: 14px; }
+  .data-table th, .data-table td { padding: 8px 14px; font-size: 13px; }
+  tr.row-property td, tr.row-bedtype td { font-size: 13px; }
+}

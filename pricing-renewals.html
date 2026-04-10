@@ -697,12 +697,13 @@ function rebuildRenewalTermModal(unit) {
 
 // ── Class Badge ───────────────────────────────────────────
 function classBadge(cls) {
+  const safeCls = (cls === 'A' || cls === 'B') ? cls : 'B';
   const config = {
     A: { bg: 'rgba(245,158,11,0.12)', color: '#92400e', border: 'rgba(245,158,11,0.3)' },
     B: { bg: 'rgba(100,116,139,0.1)', color: '#475569', border: 'rgba(100,116,139,0.25)' },
   };
-  const c = config[cls] ?? config.B;
-  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;font-size:10px;font-weight:800;background:${c.bg};color:${c.color};border:1px solid ${c.border};flex-shrink:0;">${cls}</span>`;
+  const c = config[safeCls];
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;font-size:10px;font-weight:800;background:${c.bg};color:${c.color};border:1px solid ${c.border};flex-shrink:0;">${safeCls}</span>`;
 }
 
 // ── Amenity icons ─────────────────────────────────────────
