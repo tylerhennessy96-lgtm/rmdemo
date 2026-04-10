@@ -41,7 +41,7 @@
 
 <!-- Concession Info Modal -->
 <div class="modal-backdrop" id="concInfoModal">
-  <div class="modal" style="width:600px;max-height:80vh;">
+  <div class="modal" style="width:min(95vw,860px);max-width:min(95vw,860px);max-height:85vh;">
     <div class="modal-header"><div><div class="modal-title">Active Concessions</div><div class="modal-subtitle" id="concInfoSubtitle"></div></div><button class="modal-close" onclick="closeModal('concInfoModal')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg></button></div>
     <div class="modal-body" style="overflow-y:auto;">
       <div id="concInfoEmpty" style="display:none;padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">No active concessions</div>
@@ -128,7 +128,7 @@ function renderOverviewTable(data){
       <th rowspan="2" style="min-width:180px;position:sticky;left:0;background:var(--surface);z-index:12;">Community<span class="th-sub">Bed Type / Unit</span></th>
       <th rowspan="2" style="text-align:center;">Avail.<br><span class="th-sub">Units</span></th>
       <th colspan="4" style="text-align:center;background:rgba(232,0,125,0.06);border-bottom:2px solid rgba(232,0,125,0.2);font-size:10.5px;font-weight:700;color:var(--accent);letter-spacing:.05em;">Concessions</th>
-      <th colspan="3" style="text-align:center;background:rgba(96,165,250,0.07);border-bottom:2px solid rgba(96,165,250,0.25);font-size:10.5px;font-weight:700;color:#1d4ed8;letter-spacing:.05em;">Market</th>
+      <th colspan="4" style="text-align:center;background:rgba(96,165,250,0.07);border-bottom:2px solid rgba(96,165,250,0.25);font-size:10.5px;font-weight:700;color:#1d4ed8;letter-spacing:.05em;">Market</th>
       <th rowspan="2" style="text-align:center;">Actions</th>
     </tr>
     <tr>
@@ -138,6 +138,7 @@ function renderOverviewTable(data){
       <th style="text-align:right;background:rgba(232,0,125,0.05);">Net Eff.<br><span class="th-sub">Rent</span></th>
       <th style="text-align:center;background:rgba(96,165,250,0.05);">Comp.<br><span class="th-sub">Offering</span></th>
       <th style="text-align:right;background:rgba(96,165,250,0.05);">Comp.<br><span class="th-sub">Avg</span></th>
+      <th style="text-align:right;background:rgba(96,165,250,0.05);white-space:nowrap;">Comp. Net Eff.<br><span class="th-sub">avg rent</span></th>
       <th style="text-align:center;background:rgba(96,165,250,0.05);">vs.<br><span class="th-sub">Market</span></th>
     </tr>
   </thead><tbody>`;
@@ -151,6 +152,7 @@ function renderOverviewTable(data){
     const allComps=ce?ce.competitors:[];
     const activeComps=allComps.filter(c=>c.status==='Active');
     const avgCompAmt=activeComps.length>0?Math.round(activeComps.reduce((s,c)=>s+c.amount,0)/activeComps.length):0;
+    const avgCompNetEff=activeComps.length>0?Math.round(activeComps.reduce((s,c)=>s+(c.netEffRent??c.baseRent??1800),0)/activeComps.length):0;
     const avgCompCov=activeComps.length>0?parseFloat((activeComps.reduce((s,c)=>s+(c.unitCoverage??30),0)/activeComps.length).toFixed(1)):0;
     const compBaseRent=comm.bedTypes[0]?.recRent??1800;
     const avgCompPct=avgCompAmt>0?parseFloat((avgCompAmt/compBaseRent*100).toFixed(1)):0;
@@ -166,6 +168,7 @@ function renderOverviewTable(data){
       <td style="background:${pk};text-align:right;font-weight:500;">$${comm.commAvgNetEffRent.toLocaleString()}</td>
       <td style="background:${bl};text-align:center;"><span style="font-weight:500;">${activeComps.length}/${allComps.length}</span><span style="color:var(--text-muted);font-size:10.5px;margin-left:4px;">\u00B7 ${avgCompCov>0?avgCompCov+'%':'\u2014'}</span></td>
       <td style="background:${bl};text-align:right;"><span style="font-weight:500;">${avgCompAmt>0?'$'+avgCompAmt:'\u2014'}</span><span style="color:var(--text-muted);font-size:10.5px;margin-left:4px;">${avgCompPct>0?'\u00B7 '+avgCompPct+'%':''}</span></td>
+      <td style="background:rgba(96,165,250,0.03);text-align:right;cursor:pointer;font-weight:500;" onclick="event.stopPropagation();openCompModal&&openCompModal('${comm.id}',null)">${avgCompNetEff>0?'$'+avgCompNetEff.toLocaleString():'\u2014'}${avgCompNetEff>0&&comm.commAvgNetEffRent>0?`<span style="display:block;font-size:10px;color:${comm.commAvgNetEffRent>avgCompNetEff?'#15803d':'#e05252'};">${comm.commAvgNetEffRent>avgCompNetEff?'+':''}$${comm.commAvgNetEffRent-avgCompNetEff}</span>`:''}</td>
       <td style="background:${bl};text-align:center;"><span style="color:${vm.color};font-weight:600;">${vsMkt>=0?'+':''}$${vsMkt}</span><span style="color:${vm.color};font-size:10.5px;margin-left:4px;">\u00B7 ${vsDiscount>=0?'+':''}${vsDiscount}%</span></td>
       <td style="text-align:center;"><button onclick="event.stopPropagation();openConcInfoModal('community','${comm.id}',null,null)" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:'DM Sans',sans-serif;">View</button></td>
     </tr>`;
@@ -178,6 +181,7 @@ function renderOverviewTable(data){
       const btAvail=btp?Math.round(btTotal*parseFloat(bt.availPct??cp.availPct)/100):bt.units.length;
       const btComps=allComps.filter(c=>c.bedType===bt.type&&c.status==='Active');
       const btCompAmt=btComps.length>0?Math.round(btComps.reduce((s,c)=>s+c.amount,0)/btComps.length):0;
+      const btCompNetEff=btComps.length>0?Math.round(btComps.reduce((s,c)=>s+(c.netEffRent??c.baseRent??1800),0)/btComps.length):0;
       const btCompCov=btComps.length>0?parseFloat((btComps.reduce((s,c)=>s+(c.unitCoverage??30),0)/btComps.length).toFixed(1)):0;
       const btCompPct=btCompAmt>0?parseFloat((btCompAmt/(bt.recRent||1800)*100).toFixed(1)):0;
       const btVsMkt=bt.avgConcAmt-btCompAmt;
@@ -191,6 +195,7 @@ function renderOverviewTable(data){
         <td style="background:${pk};text-align:right;font-weight:500;">$${bt.avgNetEffRent.toLocaleString()}</td>
         <td style="background:${bl};text-align:center;">${btComps.length>0?'<span style="font-weight:500;">'+btComps.length+'</span><span style="color:var(--text-muted);font-size:10.5px;margin-left:4px;">\u00B7 '+btCompCov+'%</span>':'\u2014'}</td>
         <td style="background:${bl};text-align:right;">${btCompAmt>0?'<span style="font-weight:500;">$'+btCompAmt+'</span><span style="color:var(--text-muted);font-size:10.5px;margin-left:4px;">\u00B7 '+btCompPct+'%</span>':'\u2014'}</td>
+        <td style="background:rgba(96,165,250,0.03);text-align:right;font-weight:500;">${btCompNetEff>0?'$'+btCompNetEff.toLocaleString():'\u2014'}${btCompNetEff>0&&bt.avgNetEffRent>0?`<span style="display:block;font-size:10px;color:${bt.avgNetEffRent>btCompNetEff?'#15803d':'#e05252'};">${bt.avgNetEffRent>btCompNetEff?'+':''}$${bt.avgNetEffRent-btCompNetEff}</span>`:''}</td>
         <td style="background:${bl};text-align:center;">${btComps.length>0?'<span style="color:'+btVm.color+';font-weight:600;">'+(btVsMkt>=0?'+':'')+'$'+btVsMkt+'</span><span style="color:'+btVm.color+';font-size:10.5px;margin-left:4px;">\u00B7 '+(btVsDisc>=0?'+':'')+btVsDisc+'%</span>':'\u2014'}</td>
         <td style="text-align:center;"><button onclick="event.stopPropagation();openConcInfoModal('bedtype','${comm.id}','${bt.type}',null)" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:'DM Sans',sans-serif;">View</button></td>
       </tr>`;
@@ -205,7 +210,7 @@ function renderOverviewTable(data){
           <td style="background:${pk};text-align:right;font-weight:${unit.totalConcessionAmount>0?'600':'400'};color:${unit.totalConcessionAmount>0?'var(--accent)':'var(--text-muted)'};">${unit.totalConcessionAmount>0?'$'+unit.totalConcessionAmount:'\u2014'}</td>
           <td style="background:${pk};text-align:center;color:var(--text-secondary);">${unit.concPctOfRent>0?unit.concPctOfRent+'%':'\u2014'}</td>
           <td style="background:${pk};text-align:right;font-weight:500;">$${unit.effectiveNetRent.toLocaleString()}</td>
-          <td colspan="3" style="background:rgba(96,165,250,0.03);text-align:center;color:var(--text-muted);font-size:11px;">\u2014</td>
+          <td colspan="4" style="background:rgba(96,165,250,0.03);text-align:center;color:var(--text-muted);font-size:11px;">\u2014</td>
           <td style="text-align:center;"><button onclick="openConcInfoModal('unit','${comm.id}','${bt.type}','${unit.id}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:'DM Sans',sans-serif;">View</button></td>
         </tr>`;
       });
@@ -273,7 +278,7 @@ function openConcInfoModal(scope,commId,bedType,unitId){
 }
 
 // Management Tab
-function getDefaultAutoParams(){return{targetCoverage:25,triggerDOM:21,defaultType:'Fixed Discount',defaultAmount:150,maxCap:500,expireAfterDays:30,applyTo:'Both'};}
+function getDefaultAutoParams(){return{targetCoverage:25,triggerVacancyDays:14,defaultType:'Fixed Discount',defaultAmount:150,maxCap:500,expireAfterDays:30,applyTo:'Both'};}
 
 function renderManagementTab(filtered){
   const mc=document.getElementById('mgmtContainer');if(!mc)return;
@@ -325,13 +330,57 @@ function recomputeUnitStack(unit,commData,btData){
   unit.allApplicableConcessions=allApp;unit.stackedList=stackedList;unit.totalConcessionAmount=totalAmount;unit.effectiveNetRent=effectiveRent;unit.concPctOfRent=unit.baseRent>0?parseFloat((totalAmount/unit.baseRent*100).toFixed(1)):0;unit.hasConcession=totalAmount>0;unit.stackCount=stackedList.length;
 }
 
-function renderMgmtConcRow(c,isInh){
-  const sc={'Active':{bg:'rgba(74,222,128,0.12)',c:'#15803d'},'Paused':{bg:'rgba(148,163,184,0.12)',c:'#475569'},'Expired':{bg:'rgba(148,163,184,0.1)',c:'#6b7280'}};const s=sc[c.status]||sc.Active;
-  const ltc={'New Lease':{bg:'rgba(232,0,125,0.08)',c:'var(--accent)'},'Renewal':{bg:'rgba(96,165,250,0.1)',c:'#1d4ed8'},'Both':{bg:'rgba(148,163,184,0.1)',c:'#475569'}};const lt=ltc[c.leaseType]||ltc.Both;
-  const amtD=c.valueType==='relative'?c.value+'% (\u2248$'+c.displayAmount+')':c.valueType==='free_period'?c.value+' mo. free':'$'+c.displayAmount;
-  const excl=[c.excludeAffordable?'No AF':null,c.excludeRC?'No RC':null].filter(Boolean).join(', ')||'\u2014';
-  const lvlCfg={community:{l:'COMM',bg:'rgba(167,139,250,0.15)',c:'#6d28d9'},bedtype:{l:'BED',bg:'rgba(96,165,250,0.12)',c:'#1d4ed8'},unit:{l:'UNIT',bg:'rgba(232,0,125,0.1)',c:'var(--accent)'}};const lv=lvlCfg[c.level]||lvlCfg.unit;
-  return`<tr style="border-bottom:1px solid var(--border);opacity:${isInh?'.65':'1'};"><td><span style="background:${lv.bg};color:${lv.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">${lv.l}</span></td><td style="font-weight:500;">${c.type}</td><td style="font-weight:600;color:var(--accent);">${amtD}</td><td><span style="background:${lt.bg};color:${lt.c};font-size:10px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.leaseType}</span></td><td style="font-size:11.5px;color:var(--text-secondary);white-space:nowrap;">${c.startDate} \u2192 ${c.endDate}</td><td style="text-align:center;font-size:13px;">${c.stackable?'<span style="color:#15803d;">\u2713</span>':'<span style="color:#e05252;">\u2717</span>'}</td><td style="text-align:center;"><span style="background:var(--body-bg);border:1px solid var(--border-mid);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;">${c.priority}</span></td><td style="font-size:11.5px;color:var(--text-secondary);">${excl}</td><td><span style="background:${s.bg};color:${s.c};font-size:11px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.status}</span></td><td style="text-align:center;">${isInh?'<span style="font-size:11px;color:var(--text-muted);">inherited</span>':`<div style="display:flex;gap:4px;justify-content:center;"><button onclick="editMgmtConc('${c.id}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:'DM Sans',sans-serif;">Edit</button><button onclick="toggleMgmtPause('${c.id}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 8px;font-size:11px;color:${c.status==='Paused'?'var(--accent)':'var(--text-secondary)'};cursor:pointer;font-family:'DM Sans',sans-serif;">${c.status==='Paused'?'Resume':'Pause'}</button><button onclick="removeMgmtConc('${c.id}')" style="background:none;border:1px solid rgba(248,113,113,0.4);border-radius:4px;padding:3px 8px;font-size:11px;color:#e05252;cursor:pointer;font-family:'DM Sans',sans-serif;">Remove</button></div>`}</td></tr>`;
+function renderMgmtConcRow(c, isInh) {
+  const sc = {'Active':{bg:'rgba(74,222,128,0.12)',c:'#15803d'},'Paused':{bg:'rgba(148,163,184,0.12)',c:'#475569'},'Expired':{bg:'rgba(148,163,184,0.1)',c:'#6b7280'}};
+  const s = sc[c.status] || sc.Active;
+  const ltc = {'New Lease':{bg:'rgba(232,0,125,0.08)',c:'var(--accent)'},'Renewal':{bg:'rgba(96,165,250,0.1)',c:'#1d4ed8'},'Both':{bg:'rgba(148,163,184,0.1)',c:'#475569'}};
+  const lt = ltc[c.leaseType] || ltc.Both;
+  const amtD = c.valueType === 'relative' ? c.value + '% (\u2248$' + c.displayAmount + ')'
+    : c.valueType === 'free_period' ? c.value + ' mo. free'
+    : c.valueType === 'flat_monthly' ? '$' + c.value + '/mo'
+    : '$' + c.displayAmount;
+  const excl = [c.excludeAffordable ? 'No AF' : null, c.excludeRC ? 'No RC' : null].filter(Boolean).join(', ') || '\u2014';
+  const lvlCfg = {community:{l:'COMM',bg:'rgba(167,139,250,0.15)',c:'#6d28d9'},bedtype:{l:'BED',bg:'rgba(96,165,250,0.12)',c:'#1d4ed8'},unit:{l:'UNIT',bg:'rgba(232,0,125,0.1)',c:'var(--accent)'}};
+  const lv = lvlCfg[c.level] || lvlCfg.unit;
+  const actionsCell = isInh
+    ? '<span style="font-size:11px;color:var(--text-muted);">inherited</span>'
+    : `<div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;"><button onclick="editMgmtConc('${c.id}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:'DM Sans',sans-serif;">Edit</button><button onclick="toggleMgmtPause('${c.id}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 8px;font-size:11px;color:${c.status==='Paused'?'var(--accent)':'var(--text-secondary)'};cursor:pointer;font-family:'DM Sans',sans-serif;">${c.status==='Paused'?'Resume':'Pause'}</button><button onclick="toggleConcHistory('${c.id}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:'DM Sans',sans-serif;">History</button><button onclick="removeMgmtConc('${c.id}')" style="background:none;border:1px solid rgba(248,113,113,0.4);border-radius:4px;padding:3px 8px;font-size:11px;color:#e05252;cursor:pointer;font-family:'DM Sans',sans-serif;">Remove</button></div>`;
+  const main = `<tr style="border-bottom:1px solid var(--border);opacity:${isInh?'.65':'1'};"><td><span style="background:${lv.bg};color:${lv.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">${lv.l}</span></td><td style="font-weight:500;">${c.type}</td><td style="font-weight:600;color:var(--accent);">${amtD}</td><td><span style="background:${lt.bg};color:${lt.c};font-size:10px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.leaseType}</span></td><td style="font-size:11.5px;color:var(--text-secondary);white-space:nowrap;">${c.startDate} \u2192 ${c.endDate}</td><td style="text-align:center;font-size:13px;">${c.stackable?'<span style="color:#15803d;">\u2713</span>':'<span style="color:#e05252;">\u2717</span>'}</td><td style="text-align:center;"><span style="background:var(--body-bg);border:1px solid var(--border-mid);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;">${c.priority}</span></td><td style="font-size:11.5px;color:var(--text-secondary);">${excl}</td><td><span style="background:${s.bg};color:${s.c};font-size:11px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.status}</span></td><td style="text-align:center;">${actionsCell}</td></tr>`;
+  if (isInh) return main;
+  const createdLine = `<span>Created by <strong style="color:var(--text-primary);">${c.createdBy ?? 'Unknown'}</strong>${c.createdAt ? ' on ' + c.createdAt : ''}</span>${c.editedBy ? `<span style="color:var(--text-muted);">·</span><span>Last edited by <strong style="color:var(--text-primary);">${c.editedBy}</strong>${c.editedAt ? ' on ' + c.editedAt : ''}</span>` : ''}`;
+  const histLog = (c.history && c.history.length > 0)
+    ? `<div style="display:flex;flex-direction:column;gap:6px;padding-left:4px;border-left:2px solid var(--border-mid);">${c.history.map(h => `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding-left:10px;font-size:12px;"><span style="color:var(--text-muted);white-space:nowrap;min-width:90px;">${h.date}</span><span style="font-weight:500;color:var(--text-secondary);">${h.editedBy}</span><span style="color:var(--text-muted);">changed ${h.field}:</span><span style="color:var(--text-muted);text-decoration:line-through;">${h.oldValue}</span><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><line x1="2" y1="7" x2="12" y2="7"/><polyline points="8,3 12,7 8,11"/></svg><span style="color:var(--text-primary);font-weight:500;">${h.newValue}</span></div>`).join('')}</div>`
+    : '<div style="font-size:12px;color:var(--text-muted);font-style:italic;">No changes recorded</div>';
+  const hist = `<tr id="hist-${c.id}" style="display:none;background:var(--body-bg);border-bottom:1px solid var(--border);"><td colspan="10" style="padding:0;"><div style="padding:14px 18px;"><div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;display:flex;gap:16px;flex-wrap:wrap;">${createdLine}</div>${histLog}</div></td></tr>`;
+  return main + hist;
+}
+
+function toggleConcHistory(concId) {
+  const row = document.getElementById('hist-' + concId);
+  if (!row) return;
+  const isHidden = row.style.display === 'none' || row.style.display === '';
+
+  // Close all other open history rows and reset their buttons
+  document.querySelectorAll('[id^="hist-"]').forEach(r => {
+    r.style.display = 'none';
+    const otherId = r.id.replace('hist-', '');
+    const otherBtn = document.querySelector(`button[onclick="toggleConcHistory('${otherId}')"]`);
+    if (otherBtn) {
+      otherBtn.textContent = 'History';
+      otherBtn.style.color = 'var(--text-secondary)';
+      otherBtn.style.borderColor = 'var(--border-mid)';
+    }
+  });
+
+  if (isHidden) {
+    row.style.display = 'table-row';
+    const btn = document.querySelector(`button[onclick="toggleConcHistory('${concId}')"]`);
+    if (btn) {
+      btn.textContent = 'Hide';
+      btn.style.color = 'var(--accent)';
+      btn.style.borderColor = 'var(--accent)';
+    }
+  }
 }
 
 function renderMgmtPanel(){
@@ -365,13 +414,13 @@ function renderMgmtPanel(){
         <div style="background:var(--body-bg);border-radius:10px;border:1px solid var(--border);padding:18px 20px;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Concession Type</div><select id="fc_type" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:var(--surface);outline:none;appearance:none;">${CONCESSION_TYPE_OPTIONS.map(t=>`<option>${t}</option>`).join('')}</select></div>
-            <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Value</div><div style="display:flex;gap:8px;align-items:center;"><div style="display:flex;border:1px solid var(--border-mid);border-radius:var(--radius);overflow:hidden;flex-shrink:0;">${['$','%','mo'].map((vt,i)=>`<button id="vtype_${i}" onclick="setValueType(${i})" style="padding:6px 10px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;background:${i===0?'var(--accent)':'var(--surface)'};color:${i===0?'#fff':'var(--text-secondary)'};font-weight:${i===0?'600':'400'};">${vt}</button>`).join('')}</div><input type="number" id="fc_value" oninput="updateConcPreview()" placeholder="0" style="flex:1;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;"></div></div>
+            <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Value Type</div><select id="fc_valueType" onchange="onValueTypeChange()" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:var(--surface);outline:none;appearance:none;">${CONCESSION_VALUE_TYPES.map(vt=>`<option value="${vt.id}">${vt.label}</option>`).join('')}</select></div><div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;" id="fc_valueLabel">Amount ($)</div><input type="number" id="fc_value" oninput="updateConcPreview()" placeholder="0" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;"></div>
             <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Applies to</div><div style="display:flex;border:1px solid var(--border-mid);border-radius:var(--radius);overflow:hidden;">${['New Lease','Renewal','Both'].map((lt,i)=>`<button id="ltype_${i}" onclick="setLeaseType(${i})" style="flex:1;padding:7px 8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11.5px;background:${i===2?'var(--accent)':'var(--surface)'};color:${i===2?'#fff':'var(--text-secondary)'};font-weight:${i===2?'600':'400'};">${lt}</button>`).join('')}</div></div>
             <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Stacking</div><div style="display:flex;gap:10px;align-items:center;"><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_stackable" checked style="accent-color:var(--accent);">Stackable</label><div style="display:flex;align-items:center;gap:6px;margin-left:auto;"><span style="font-size:12px;color:var(--text-secondary);">Priority</span><input type="number" id="fc_priority" value="5" min="1" style="width:52px;border:1px solid var(--border-mid);border-radius:var(--radius);padding:5px 8px;font-family:'DM Sans',sans-serif;font-size:12px;text-align:center;outline:none;"></div></div></div>
             <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Offer Start</div><input type="date" id="fc_startDate" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;color:var(--text-primary);"></div>
             <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Offer End</div><input type="date" id="fc_endDate" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;color:var(--text-primary);"></div>
           </div>
-          <div id="concPreview" style="display:none;margin-top:14px;padding:10px 14px;background:rgba(232,0,125,0.05);border:1px solid rgba(232,0,125,0.2);border-radius:8px;"><div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Impact Preview</div><div style="display:flex;gap:20px;align-items:baseline;"><div><span style="font-size:12px;color:var(--text-muted);">Concession:</span><span style="font-size:15px;font-weight:700;color:var(--accent);margin-left:4px;" id="previewAmount">\u2014</span></div><div><span style="font-size:12px;color:var(--text-muted);">Net Eff.:</span><span style="font-size:15px;font-weight:700;color:var(--text-primary);margin-left:4px;" id="previewNetEff">\u2014</span></div></div></div>
+          <div style="grid-column:span 2;"><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Applies to Lease Terms<span style="font-weight:400;margin-left:4px;">(leave empty = all terms)</span></div><select id="fc_termSelect" multiple style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:4px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:var(--surface);outline:none;color:var(--text-primary);height:80px;">${Array.from({length:23},(_,i)=>i+2).map(t=>`<option value="${t}">${t} months</option>`).join('')}</select><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Hold Cmd/Ctrl to select multiple terms</div></div><div style="grid-column:span 2;"><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Application</div><div style="display:flex;border:1px solid var(--border-mid);border-radius:var(--radius);overflow:hidden;max-width:320px;"><button id="app_discount" type="button" onclick="setApplication('discount')" style="flex:1;padding:7px 8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11.5px;background:var(--accent);color:#fff;font-weight:600;">Discount Rent</button><button id="app_grossup" type="button" onclick="setApplication('gross_up')" style="flex:1;padding:7px 8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11.5px;background:var(--surface);color:var(--text-secondary);font-weight:400;">Gross Up Rent</button></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;" id="applicationDesc">Reduces the net effective rent the resident pays</div></div><div style="grid-column:span 2;padding-top:14px;border-top:1px solid var(--border);"><div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Eligibility Conditions</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Unit Status</div><select id="fc_unitStatus" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:var(--surface);outline:none;"><option value="all">All units</option><option value="vacant">Vacant only</option><option value="on_notice">On Notice only</option></select></div><div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Min. Days Vacant</div><div style="display:flex;align-items:center;gap:8px;"><input type="number" id="fc_minVacancyDays" placeholder="Any" style="flex:1;border:1px solid var(--border-mid);border-radius:var(--radius);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:12.5px;outline:none;"><span style="font-size:12px;color:var(--text-secondary);">days</span></div></div></div></div><div id="concPreview" style="display:none;margin-top:14px;padding:10px 14px;background:rgba(232,0,125,0.05);border:1px solid rgba(232,0,125,0.2);border-radius:8px;"><div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Impact Preview</div><div style="display:flex;gap:20px;align-items:baseline;"><div><span style="font-size:12px;color:var(--text-muted);">Concession:</span><span style="font-size:15px;font-weight:700;color:var(--accent);margin-left:4px;" id="previewAmount">\u2014</span></div><div><span style="font-size:12px;color:var(--text-muted);">Net Eff.:</span><span style="font-size:15px;font-weight:700;color:var(--text-primary);margin-left:4px;" id="previewNetEff">\u2014</span></div></div></div>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);"><button onclick="cancelConcForm()" class="btn btn-ghost" style="font-size:12px;">Cancel</button><button onclick="saveUnitConc()" class="btn btn-primary" style="font-size:12px;"><span id="saveConcBtnLabel">Save Concession</span></button></div>
         </div>
       </div>
@@ -411,14 +460,14 @@ function renderMgmtPanel(){
       <div style="background:var(--body-bg);border-radius:10px;border:1px solid var(--border);padding:18px 20px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
           <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Concession Type</div><select id="fc_type" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:var(--surface);outline:none;appearance:none;">${CONCESSION_TYPE_OPTIONS.map(t=>`<option>${t}</option>`).join('')}</select></div>
-          <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Value</div><div style="display:flex;gap:8px;align-items:center;"><div style="display:flex;border:1px solid var(--border-mid);border-radius:var(--radius);overflow:hidden;flex-shrink:0;">${['$','%','mo'].map((vt,i)=>`<button id="vtype_${i}" onclick="setValueType(${i})" style="padding:6px 10px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;background:${i===0?'var(--accent)':'var(--surface)'};color:${i===0?'#fff':'var(--text-secondary)'};font-weight:${i===0?'600':'400'};">${vt}</button>`).join('')}</div><input type="number" id="fc_value" oninput="updateConcPreview()" placeholder="0" style="flex:1;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;"></div></div>
+          <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Value Type</div><select id="fc_valueType" onchange="onValueTypeChange()" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:var(--surface);outline:none;appearance:none;">${CONCESSION_VALUE_TYPES.map(vt=>`<option value="${vt.id}">${vt.label}</option>`).join('')}</select></div><div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;" id="fc_valueLabel">Amount ($)</div><input type="number" id="fc_value" oninput="updateConcPreview()" placeholder="0" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;"></div>
           <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Applies to</div><div style="display:flex;border:1px solid var(--border-mid);border-radius:var(--radius);overflow:hidden;">${['New Lease','Renewal','Both'].map((lt,i)=>`<button id="ltype_${i}" onclick="setLeaseType(${i})" style="flex:1;padding:7px 8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11.5px;background:${i===2?'var(--accent)':'var(--surface)'};color:${i===2?'#fff':'var(--text-secondary)'};font-weight:${i===2?'600':'400'};">${lt}</button>`).join('')}</div></div>
           <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Stacking</div><div style="display:flex;gap:10px;align-items:center;"><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_stackable" checked style="accent-color:var(--accent);">Stackable</label><div style="display:flex;align-items:center;gap:6px;margin-left:auto;"><span style="font-size:12px;color:var(--text-secondary);">Priority</span><input type="number" id="fc_priority" value="1" min="1" style="width:52px;border:1px solid var(--border-mid);border-radius:var(--radius);padding:5px 8px;font-family:'DM Sans',sans-serif;font-size:12px;text-align:center;outline:none;"></div></div></div>
           <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Offer Start</div><input type="date" id="fc_startDate" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;color:var(--text-primary);"></div>
           <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Offer End</div><input type="date" id="fc_endDate" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;color:var(--text-primary);"></div>
         </div>
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:20px;align-items:center;"><span style="font-size:12px;color:var(--text-secondary);font-weight:500;">Exclude:</span><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_excludeAF" style="accent-color:var(--accent);">Affordable (AF)</label><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_excludeRC" style="accent-color:var(--accent);">Rent Controlled (RC)</label></div>
-        <div id="concPreview" style="display:none;margin-top:14px;padding:10px 14px;background:rgba(232,0,125,0.05);border:1px solid rgba(232,0,125,0.2);border-radius:8px;"><div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Impact Preview</div><div style="display:flex;gap:20px;align-items:baseline;"><div><span style="font-size:12px;color:var(--text-muted);">Concession:</span><span style="font-size:15px;font-weight:700;color:var(--accent);margin-left:4px;" id="previewAmount">\u2014</span></div><div><span style="font-size:12px;color:var(--text-muted);">Net Eff.:</span><span style="font-size:15px;font-weight:700;color:var(--text-primary);margin-left:4px;" id="previewNetEff">\u2014</span></div><div><span style="font-size:12px;color:var(--text-muted);">% rent:</span><span style="font-size:15px;font-weight:700;color:var(--text-secondary);margin-left:4px;" id="previewPct">\u2014</span></div></div></div>
+        <div style="grid-column:span 2;"><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Applies to Lease Terms<span style="font-weight:400;margin-left:4px;">(leave empty = all terms)</span></div><select id="fc_termSelect" multiple style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:4px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:var(--surface);outline:none;color:var(--text-primary);height:80px;">${Array.from({length:23},(_,i)=>i+2).map(t=>`<option value="${t}">${t} months</option>`).join('')}</select><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Hold Cmd/Ctrl to select multiple terms</div></div><div style="grid-column:span 2;"><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Application</div><div style="display:flex;border:1px solid var(--border-mid);border-radius:var(--radius);overflow:hidden;max-width:320px;"><button id="app_discount" type="button" onclick="setApplication('discount')" style="flex:1;padding:7px 8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11.5px;background:var(--accent);color:#fff;font-weight:600;">Discount Rent</button><button id="app_grossup" type="button" onclick="setApplication('gross_up')" style="flex:1;padding:7px 8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11.5px;background:var(--surface);color:var(--text-secondary);font-weight:400;">Gross Up Rent</button></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;" id="applicationDesc">Reduces the net effective rent the resident pays</div></div><div style="grid-column:span 2;padding-top:14px;border-top:1px solid var(--border);"><div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Eligibility Conditions</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Unit Status</div><select id="fc_unitStatus" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:var(--surface);outline:none;"><option value="all">All units</option><option value="vacant">Vacant only</option><option value="on_notice">On Notice only</option></select></div><div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Min. Days Vacant</div><div style="display:flex;align-items:center;gap:8px;"><input type="number" id="fc_minVacancyDays" placeholder="Any" style="flex:1;border:1px solid var(--border-mid);border-radius:var(--radius);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:12.5px;outline:none;"><span style="font-size:12px;color:var(--text-secondary);">days</span></div></div></div></div><div id="concPreview" style="display:none;margin-top:14px;padding:10px 14px;background:rgba(232,0,125,0.05);border:1px solid rgba(232,0,125,0.2);border-radius:8px;"><div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Impact Preview</div><div style="display:flex;gap:20px;align-items:baseline;"><div><span style="font-size:12px;color:var(--text-muted);">Concession:</span><span style="font-size:15px;font-weight:700;color:var(--accent);margin-left:4px;" id="previewAmount">\u2014</span></div><div><span style="font-size:12px;color:var(--text-muted);">Net Eff.:</span><span style="font-size:15px;font-weight:700;color:var(--text-primary);margin-left:4px;" id="previewNetEff">\u2014</span></div><div><span style="font-size:12px;color:var(--text-muted);">% rent:</span><span style="font-size:15px;font-weight:700;color:var(--text-secondary);margin-left:4px;" id="previewPct">\u2014</span></div></div></div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);"><button onclick="cancelConcForm()" class="btn btn-ghost" style="font-size:12px;">Cancel</button><button onclick="saveMgmtConc()" class="btn btn-primary" style="font-size:12px;"><span id="saveConcBtnLabel">Save Concession</span></button></div>
       </div>
     </div>
@@ -426,7 +475,7 @@ function renderMgmtPanel(){
       <div style="background:var(--body-bg);border-radius:10px;border:1px solid var(--border);padding:18px 20px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
           <div><div style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;">Target Coverage <span style="font-size:10.5px;font-weight:400;color:var(--text-muted);">% of available</span></div><div style="display:flex;align-items:center;gap:10px;"><input type="range" id="ap_coverage" value="${autoParams.targetCoverage}" min="0" max="100" step="5" oninput="document.getElementById('ap_coverageVal').textContent=this.value+'%'" style="flex:1;accent-color:var(--accent);"><span id="ap_coverageVal" style="font-size:14px;font-weight:600;min-width:40px;text-align:right;">${autoParams.targetCoverage}%</span></div></div>
-          <div><div style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;">Trigger After Days on Market</div><div style="display:flex;align-items:center;gap:8px;"><input type="number" id="ap_dom" value="${autoParams.triggerDOM}" style="width:80px;border:1px solid var(--border-mid);border-radius:var(--radius);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;outline:none;text-align:center;"><span style="font-size:12.5px;color:var(--text-secondary);">days</span></div></div>
+          <div><div style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;">Trigger After Days Vacant</div><div style="display:flex;align-items:center;gap:8px;"><input type="number" id="ap_vacancyDays" value="${autoParams.triggerVacancyDays??14}" style="width:80px;border:1px solid var(--border-mid);border-radius:var(--radius);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;outline:none;text-align:center;"><span style="font-size:12.5px;color:var(--text-secondary);">days</span></div></div>
           <div><div style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;">Default Type</div><select id="ap_defaultType" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:var(--surface);outline:none;appearance:none;">${CONCESSION_TYPE_OPTIONS.map(t=>`<option ${t===autoParams.defaultType?'selected':''}>${t}</option>`).join('')}</select></div>
           <div><div style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;">Default Amount</div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:14px;font-weight:600;color:var(--text-secondary);">$</span><input type="number" id="ap_defaultAmt" value="${autoParams.defaultAmount}" style="flex:1;border:1px solid var(--border-mid);border-radius:var(--radius);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;outline:none;"></div></div>
           <div><div style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;">Max Cap</div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:14px;font-weight:600;color:var(--text-secondary);">$</span><input type="number" id="ap_maxCap" value="${autoParams.maxCap}" style="flex:1;border:1px solid var(--border-mid);border-radius:var(--radius);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;outline:none;"></div></div>
@@ -438,29 +487,270 @@ function renderMgmtPanel(){
 }
 
 // Form functions
-function setValueType(i){selectedValueType=i;[0,1,2].forEach(j=>{const b=document.getElementById('vtype_'+j);if(b){b.style.background=j===i?'var(--accent)':'var(--surface)';b.style.color=j===i?'#fff':'var(--text-secondary)';b.style.fontWeight=j===i?'600':'400';}});updateConcPreview();}
+let selectedApplication = 'discount';
+
+function setValueTypeId(id) {
+  const sel = document.getElementById('fc_valueType');
+  if (sel) sel.value = id;
+  onValueTypeChange();
+}
+
+function onValueTypeChange() {
+  const vt = document.getElementById('fc_valueType')?.value || 'absolute';
+  const labels = {
+    absolute: 'Amount ($)',
+    relative: 'Amount (%)',
+    flat_monthly: 'Monthly Amount ($/mo)',
+    free_period: 'Months Free',
+  };
+  const lbl = document.getElementById('fc_valueLabel');
+  if (lbl) lbl.textContent = labels[vt] ?? 'Amount';
+  updateConcPreview();
+}
+
+
+function setApplication(type) {
+  selectedApplication = type;
+  const descs = {
+    discount: 'Reduces the net effective rent the resident pays',
+    gross_up: 'Listed rent is increased; net effective equals target rent',
+  };
+  const dEl = document.getElementById('app_discount');
+  const gEl = document.getElementById('app_grossup');
+  if (dEl) {
+    dEl.style.background = type === 'discount' ? 'var(--accent)' : 'var(--surface)';
+    dEl.style.color = type === 'discount' ? '#fff' : 'var(--text-secondary)';
+    dEl.style.fontWeight = type === 'discount' ? '600' : '400';
+  }
+  if (gEl) {
+    gEl.style.background = type === 'gross_up' ? 'var(--accent)' : 'var(--surface)';
+    gEl.style.color = type === 'gross_up' ? '#fff' : 'var(--text-secondary)';
+    gEl.style.fontWeight = type === 'gross_up' ? '600' : '400';
+  }
+  const dEsc = document.getElementById('applicationDesc');
+  if (dEsc) dEsc.textContent = descs[type];
+}
+
 function setLeaseType(i){selectedLeaseType=i;[0,1,2].forEach(j=>{const b=document.getElementById('ltype_'+j);if(b){b.style.background=j===i?'var(--accent)':'var(--surface)';b.style.color=j===i?'#fff':'var(--text-secondary)';b.style.fontWeight=j===i?'600':'400';}});}
 
-function updateConcPreview(){const val=parseFloat(document.getElementById('fc_value')?.value);if(isNaN(val)||val<=0){document.getElementById('concPreview').style.display='none';return;}const comm=CONCESSIONS_DATA.find(c=>c.id===selectedMgmtCommId);const bt=selectedMgmtBedType?comm?.bedTypes.find(b=>b.type===selectedMgmtBedType):null;const baseRent=bt?.recRent??comm?.bedTypes[0]?.recRent??1800;let da;if(selectedValueType===0)da=val;else if(selectedValueType===1)da=Math.round(baseRent*val/100);else da=Math.round(baseRent*val/12);document.getElementById('previewAmount').textContent='-$'+da;document.getElementById('previewNetEff').textContent='$'+Math.max(0,baseRent-da).toLocaleString();document.getElementById('previewPct').textContent=parseFloat((da/baseRent*100).toFixed(1))+'%';document.getElementById('concPreview').style.display='block';}
+function updateConcPreview() {
+  const val = parseFloat(document.getElementById('fc_value')?.value);
+  if (isNaN(val) || val <= 0) {
+    const cp = document.getElementById('concPreview');
+    if (cp) cp.style.display = 'none';
+    return;
+  }
+  const vt = document.getElementById('fc_valueType')?.value || 'absolute';
+  const comm = CONCESSIONS_DATA.find(c => c.id === selectedMgmtCommId);
+  const bt = selectedMgmtBedType ? comm?.bedTypes.find(b => b.type === selectedMgmtBedType) : null;
+  const baseRent = bt?.recRent ?? comm?.bedTypes[0]?.recRent ?? 1800;
+  let da;
+  if (vt === 'relative') da = Math.round(baseRent * val / 100);
+  else if (vt === 'free_period') da = Math.round(baseRent * val / 12);
+  else if (vt === 'flat_monthly') da = val;
+  else da = val;
+  document.getElementById('previewAmount').textContent = '-$' + da;
+  document.getElementById('previewNetEff').textContent = '$' + Math.max(0, baseRent - da).toLocaleString();
+  const pp = document.getElementById('previewPct');
+  if (pp) pp.textContent = parseFloat((da / baseRent * 100).toFixed(1)) + '%';
+  document.getElementById('concPreview').style.display = 'block';
+}
 
-function openAddConcForm(){editingConcessionId=null;const t=document.getElementById('addConcFormTitle');if(t)t.textContent=selectedMgmtUnitId?'New Unit-Specific Concession':'New Concession';const sl=document.getElementById('saveConcBtnLabel');if(sl)sl.textContent='Save Concession';const fv=document.getElementById('fc_value');if(fv)fv.value='';const fp=document.getElementById('fc_priority');if(fp)fp.value=selectedMgmtUnitId?'5':'1';const fs=document.getElementById('fc_stackable');if(fs)fs.checked=true;const fa=document.getElementById('fc_excludeAF');if(fa)fa.checked=false;const fr=document.getElementById('fc_excludeRC');if(fr)fr.checked=false;const cp=document.getElementById('concPreview');if(cp)cp.style.display='none';setValueType(0);setLeaseType(2);const form=document.getElementById('addConcForm');if(form){form.style.display='block';form.scrollIntoView({behavior:'smooth'});}}
+function openAddConcForm() {
+  editingConcessionId = null;
+  const t = document.getElementById('addConcFormTitle');
+  if (t) t.textContent = selectedMgmtUnitId ? 'New Unit-Specific Concession' : 'New Concession';
+  const sl = document.getElementById('saveConcBtnLabel');
+  if (sl) sl.textContent = 'Save Concession';
+  const fv = document.getElementById('fc_value'); if (fv) fv.value = '';
+  const fp = document.getElementById('fc_priority'); if (fp) fp.value = selectedMgmtUnitId ? '5' : '1';
+  const fs = document.getElementById('fc_stackable'); if (fs) fs.checked = true;
+  const fa = document.getElementById('fc_excludeAF'); if (fa) fa.checked = false;
+  const fr = document.getElementById('fc_excludeRC'); if (fr) fr.checked = false;
+  const ts = document.getElementById('fc_termSelect');
+  if (ts) Array.from(ts.options).forEach(o => { o.selected = false; });
+  const us = document.getElementById('fc_unitStatus'); if (us) us.value = 'all';
+  const mvd = document.getElementById('fc_minVacancyDays'); if (mvd) mvd.value = '';
+  const cp = document.getElementById('concPreview'); if (cp) cp.style.display = 'none';
+  const m = document.getElementById('concEditMeta'); if (m) m.remove();
+  setValueTypeId('absolute');
+  setLeaseType(2);
+  setApplication('discount');
+  const form = document.getElementById('addConcForm');
+  if (form) { form.style.display = 'block'; form.scrollIntoView({behavior:'smooth'}); }
+}
 
-function editMgmtConc(id){editingConcessionId=id;const comm=CONCESSIONS_DATA.find(c=>c.id===selectedMgmtCommId);const bt=selectedMgmtBedType?comm?.bedTypes.find(b=>b.type===selectedMgmtBedType):null;const concs=bt?bt.btConcessions:comm?.commConcessions??[];const conc=concs.find(c=>c.id===id);if(!conc)return;document.getElementById('addConcFormTitle').textContent='Edit Concession';document.getElementById('saveConcBtnLabel').textContent='Update';document.getElementById('fc_type').value=conc.type;document.getElementById('fc_value').value=conc.value;document.getElementById('fc_priority').value=conc.priority;document.getElementById('fc_stackable').checked=conc.stackable;document.getElementById('fc_excludeAF').checked=conc.excludeAffordable;document.getElementById('fc_excludeRC').checked=conc.excludeRC;setValueType(conc.valueType==='absolute'?0:conc.valueType==='relative'?1:2);setLeaseType(conc.leaseType==='New Lease'?0:conc.leaseType==='Renewal'?1:2);document.getElementById('addConcForm').style.display='block';updateConcPreview();document.getElementById('addConcForm').scrollIntoView({behavior:'smooth'});}
+function editMgmtConc(id) {
+  editingConcessionId = id;
+  const comm = CONCESSIONS_DATA.find(c => c.id === selectedMgmtCommId);
+  const bt = selectedMgmtBedType ? comm?.bedTypes.find(b => b.type === selectedMgmtBedType) : null;
+  const concs = bt ? bt.btConcessions : comm?.commConcessions ?? [];
+  const conc = concs.find(c => c.id === id);
+  if (!conc) return;
+  document.getElementById('addConcFormTitle').textContent = 'Edit Concession';
+  document.getElementById('saveConcBtnLabel').textContent = 'Update';
+  document.getElementById('fc_type').value = conc.type;
+  document.getElementById('fc_value').value = conc.value;
+  document.getElementById('fc_priority').value = conc.priority;
+  document.getElementById('fc_stackable').checked = conc.stackable;
+  document.getElementById('fc_excludeAF').checked = conc.excludeAffordable;
+  document.getElementById('fc_excludeRC').checked = conc.excludeRC;
+  setValueTypeId(conc.valueType ?? 'absolute');
+  setLeaseType(conc.leaseType === 'New Lease' ? 0 : conc.leaseType === 'Renewal' ? 1 : 2);
+  setApplication(conc.application ?? 'discount');
+  // Pre-select term multiselect options from conc.termValues array
+  const termSelect = document.getElementById('fc_termSelect');
+  if (termSelect) {
+    const set = new Set((conc.termValues && Array.isArray(conc.termValues)) ? conc.termValues : []);
+    Array.from(termSelect.options).forEach(opt => { opt.selected = set.has(parseInt(opt.value)); });
+  }
+  const us = document.getElementById('fc_unitStatus'); if (us) us.value = conc.unitStatus ?? 'all';
+  const mvd = document.getElementById('fc_minVacancyDays'); if (mvd) mvd.value = conc.minVacancyDays ?? '';
+  const form = document.getElementById('addConcForm');
+  form.style.display = 'block';
+  // Inject (or replace) the created/edited summary inside the form card
+  const card = form.querySelector('div[style*="background:var(--body-bg)"]') || form.firstElementChild;
+  let meta = document.getElementById('concEditMeta');
+  if (!meta) {
+    meta = document.createElement('div');
+    meta.id = 'concEditMeta';
+    meta.style.cssText = 'margin-top:12px;padding:10px 14px;background:var(--body-bg);border-radius:6px;border:1px solid var(--border);font-size:11.5px;color:var(--text-secondary);';
+    if (card) card.appendChild(meta);
+  }
+  meta.innerHTML = `Created by <strong>${conc.createdBy ?? 'Unknown'}</strong>${conc.createdAt ? ' on ' + conc.createdAt : ''}${conc.editedBy ? ` &middot; Last edited by <strong>${conc.editedBy}</strong>${conc.editedAt ? ' on ' + conc.editedAt : ''}` : ''}`;
+  updateConcPreview();
+  form.scrollIntoView({behavior:'smooth'});
+}
 
-function cancelConcForm(){editingConcessionId=null;document.getElementById('addConcForm').style.display='none';}
+function cancelConcForm(){editingConcessionId=null;document.getElementById('addConcForm').style.display='none';const m=document.getElementById('concEditMeta');if(m)m.remove();}
 
-function saveMgmtConc(){const type=document.getElementById('fc_type').value;const value=parseFloat(document.getElementById('fc_value').value);const priority=parseInt(document.getElementById('fc_priority').value)||1;const stackable=document.getElementById('fc_stackable').checked;const excludeAF=document.getElementById('fc_excludeAF').checked;const excludeRC=document.getElementById('fc_excludeRC').checked;if(isNaN(value)||value<=0){alert('Please enter a valid value.');return;}const vTypes=['absolute','relative','free_period'];const lTypes=['New Lease','Renewal','Both'];const vt=vTypes[selectedValueType];const lt=lTypes[selectedLeaseType];const comm=CONCESSIONS_DATA.find(c=>c.id===selectedMgmtCommId);const bt=selectedMgmtBedType?comm?.bedTypes.find(b=>b.type===selectedMgmtBedType):null;const baseRent=bt?.recRent??comm?.bedTypes[0]?.recRent??1800;const da=vt==='relative'?Math.round(baseRent*value/100):vt==='free_period'?Math.round(baseRent*value/12):value;const fd=d=>(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0')+'/'+String(d.getFullYear()).slice(2);const sd=document.getElementById('fc_startDate').value?fd(new Date(document.getElementById('fc_startDate').value)):fd(new Date());const ed=document.getElementById('fc_endDate').value?fd(new Date(document.getElementById('fc_endDate').value)):fd(new Date(Date.now()+30*864e5));const target=bt?bt.btConcessions:comm.commConcessions;if(editingConcessionId){const idx=target.findIndex(c=>c.id===editingConcessionId);if(idx>=0)target[idx]={...target[idx],type,value,valueType:vt,displayAmount:da,priority,stackable,leaseType:lt,excludeAffordable:excludeAF,excludeRC,startDate:sd,endDate:ed,status:'Active'};showToast('Concession updated');}else{target.push({id:'CONC-NEW-'+Date.now(),level:bt?'bedtype':'community',commId:selectedMgmtCommId,commName:comm.name,bedType:selectedMgmtBedType,unitId:null,leaseType:lt,type,value,valueType:vt,displayAmount:da,priority,stackable,status:'Active',daysActive:0,daysRemaining:30,startDate:sd,endDate:ed,excludeAffordable:excludeAF,excludeRC,leasesOfferedTo:0,leasesTaken:0,uptakeRate:0,totalCost:0});showToast('Concession added');}cancelConcForm();renderMgmtPanel();renderMgmtNav(getFilteredData());}
+function _gatherFormFields() {
+  const vt = document.getElementById('fc_valueType').value;
+  const value = parseFloat(document.getElementById('fc_value').value);
+  if (isNaN(value) || value <= 0) { alert('Please enter a valid value.'); return null; }
+  const lTypes = ['New Lease','Renewal','Both'];
+  const lt = lTypes[selectedLeaseType];
+  const termSelect = document.getElementById('fc_termSelect');
+  const selectedTerms = termSelect
+    ? Array.from(termSelect.selectedOptions).map(o => parseInt(o.value))
+    : [];
+  const termValues = selectedTerms.length > 0 ? selectedTerms : null;
+  const termSpecific = selectedTerms.length > 0;
+  return {
+    type: document.getElementById('fc_type').value,
+    value, valueType: vt,
+    priority: parseInt(document.getElementById('fc_priority').value) || 1,
+    stackable: document.getElementById('fc_stackable').checked,
+    excludeAF: document.getElementById('fc_excludeAF')?.checked ?? false,
+    excludeRC: document.getElementById('fc_excludeRC')?.checked ?? false,
+    leaseType: lt,
+    termSpecific, termValues,
+    unitStatus: document.getElementById('fc_unitStatus')?.value ?? 'all',
+    minVacancyDays: parseInt(document.getElementById('fc_minVacancyDays')?.value) || null,
+    application: selectedApplication,
+  };
+}
 
-function saveUnitConc(){
-  const type=document.getElementById('fc_type').value;const value=parseFloat(document.getElementById('fc_value').value);const priority=parseInt(document.getElementById('fc_priority').value)||5;const stackable=document.getElementById('fc_stackable').checked;if(isNaN(value)||value<=0){alert('Please enter a valid value.');return;}
-  const vTypes=['absolute','relative','free_period'];const lTypes=['New Lease','Renewal','Both'];const vt=vTypes[selectedValueType];const lt=lTypes[selectedLeaseType];
-  const comm=CONCESSIONS_DATA.find(c=>c.id===selectedMgmtCommId);const btD=comm?.bedTypes.find(b=>b.type===selectedMgmtBedType);const unit=btD?.units.find(u=>u.id===selectedMgmtUnitId);if(!unit)return;
-  const baseRent=unit.baseRent;const da=vt==='relative'?Math.round(baseRent*value/100):vt==='free_period'?Math.round(baseRent*value/12):value;
-  const fd=d=>(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0')+'/'+String(d.getFullYear()).slice(2);
-  const sd=document.getElementById('fc_startDate').value?fd(new Date(document.getElementById('fc_startDate').value)):fd(new Date());const ed=document.getElementById('fc_endDate').value?fd(new Date(document.getElementById('fc_endDate').value)):fd(new Date(Date.now()+30*864e5));
-  if(editingConcessionId){const idx=unit.concessions.findIndex(c=>c.id===editingConcessionId);if(idx>=0)unit.concessions[idx]={...unit.concessions[idx],type,value,valueType:vt,displayAmount:da,priority,stackable,leaseType:lt,startDate:sd,endDate:ed,status:'Active'};showToast('Unit concession updated');}
-  else{unit.concessions.push({id:'CONC-UNIT-'+selectedMgmtUnitId+'-'+Date.now(),level:'unit',commId:selectedMgmtCommId,commName:comm.name,bedType:selectedMgmtBedType,unitId:selectedMgmtUnitId,leaseType:lt,type,value,valueType:vt,displayAmount:da,priority,stackable,status:'Active',taken:false,daysActive:0,daysRemaining:30,daysVacant:unit.daysOnMarket??0,startDate:sd,endDate:ed,excludeAffordable:false,excludeRC:false});showToast('Unit concession added');}
-  recomputeUnitStack(unit,comm,btD);cancelConcForm();renderMgmtPanel();renderMgmtNav(getFilteredData());
+function _computeDisplayAmount(vt, value, baseRent) {
+  if (vt === 'relative') return Math.round(baseRent * value / 100);
+  if (vt === 'free_period') return Math.round(baseRent * value / 12);
+  if (vt === 'flat_monthly') return value;
+  return value;
+}
+
+function saveMgmtConc() {
+  const f = _gatherFormFields();
+  if (!f) return;
+  const comm = CONCESSIONS_DATA.find(c => c.id === selectedMgmtCommId);
+  const bt = selectedMgmtBedType ? comm?.bedTypes.find(b => b.type === selectedMgmtBedType) : null;
+  const baseRent = bt?.recRent ?? comm?.bedTypes[0]?.recRent ?? 1800;
+  const da = _computeDisplayAmount(f.valueType, f.value, baseRent);
+  const fd = d => (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getDate().toString().padStart(2,'0') + '/' + String(d.getFullYear()).slice(2);
+  const sd = document.getElementById('fc_startDate').value ? fd(new Date(document.getElementById('fc_startDate').value)) : fd(new Date());
+  const ed = document.getElementById('fc_endDate').value ? fd(new Date(document.getElementById('fc_endDate').value)) : fd(new Date(Date.now()+30*864e5));
+  const nowFmt = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const target = bt ? bt.btConcessions : comm.commConcessions;
+  const common = {
+    type: f.type, value: f.value, valueType: f.valueType, displayAmount: da,
+    priority: f.priority, stackable: f.stackable, leaseType: f.leaseType,
+    excludeAffordable: f.excludeAF, excludeRC: f.excludeRC,
+    startDate: sd, endDate: ed, status: 'Active',
+    termSpecific: f.termSpecific, termValues: f.termValues,
+    unitStatus: f.unitStatus, minVacancyDays: f.minVacancyDays,
+    application: f.application,
+  };
+  if (editingConcessionId) {
+    const idx = target.findIndex(c => c.id === editingConcessionId);
+    if (idx >= 0) {
+      target[idx] = { ...target[idx], ...common, editedBy: 'Current User', editedAt: nowFmt };
+    }
+    showToast('Concession updated');
+  } else {
+    target.push({
+      id: 'CONC-NEW-' + Date.now(),
+      level: bt ? 'bedtype' : 'community',
+      commId: selectedMgmtCommId, commName: comm.name,
+      bedType: selectedMgmtBedType, unitId: null,
+      ...common,
+      monthly: MONTHLY_BY_TYPE[f.type] ?? true,
+      daysActive: 0, daysRemaining: 30,
+      leasesOfferedTo: 0, leasesTaken: 0, uptakeRate: 0, totalCost: 0,
+      createdBy: 'Current User', createdAt: nowFmt,
+      editedBy: null, editedAt: null, history: [],
+    });
+    showToast('Concession added');
+  }
+  cancelConcForm();
+  renderMgmtPanel();
+  renderMgmtNav(getFilteredData());
+}
+
+function saveUnitConc() {
+  const f = _gatherFormFields();
+  if (!f) return;
+  const comm = CONCESSIONS_DATA.find(c => c.id === selectedMgmtCommId);
+  const btD = comm?.bedTypes.find(b => b.type === selectedMgmtBedType);
+  const unit = btD?.units.find(u => u.id === selectedMgmtUnitId);
+  if (!unit) return;
+  const da = _computeDisplayAmount(f.valueType, f.value, unit.baseRent);
+  const fd = d => (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getDate().toString().padStart(2,'0') + '/' + String(d.getFullYear()).slice(2);
+  const sd = document.getElementById('fc_startDate').value ? fd(new Date(document.getElementById('fc_startDate').value)) : fd(new Date());
+  const ed = document.getElementById('fc_endDate').value ? fd(new Date(document.getElementById('fc_endDate').value)) : fd(new Date(Date.now()+30*864e5));
+  const nowFmt = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const common = {
+    type: f.type, value: f.value, valueType: f.valueType, displayAmount: da,
+    priority: f.priority, stackable: f.stackable, leaseType: f.leaseType,
+    startDate: sd, endDate: ed, status: 'Active',
+    termSpecific: f.termSpecific, termValues: f.termValues,
+    unitStatus: f.unitStatus, minVacancyDays: f.minVacancyDays,
+    application: f.application,
+  };
+  if (editingConcessionId) {
+    const idx = unit.concessions.findIndex(c => c.id === editingConcessionId);
+    if (idx >= 0) {
+      unit.concessions[idx] = { ...unit.concessions[idx], ...common, editedBy: 'Current User', editedAt: nowFmt };
+    }
+    showToast('Unit concession updated');
+  } else {
+    unit.concessions.push({
+      id: 'CONC-UNIT-' + selectedMgmtUnitId + '-' + Date.now(),
+      level: 'unit',
+      commId: selectedMgmtCommId, commName: comm.name,
+      bedType: selectedMgmtBedType, unitId: selectedMgmtUnitId,
+      ...common,
+      monthly: MONTHLY_BY_TYPE[f.type] ?? true,
+      taken: false, daysActive: 0, daysRemaining: 30,
+      daysVacant: unit.daysOnMarket ?? 0,
+      excludeAffordable: false, excludeRC: false,
+      createdBy: 'Current User', createdAt: nowFmt,
+      editedBy: null, editedAt: null, history: [],
+    });
+    showToast('Unit concession added');
+  }
+  recomputeUnitStack(unit, comm, btD);
+  cancelConcForm();
+  renderMgmtPanel();
+  renderMgmtNav(getFilteredData());
 }
 
 function toggleMgmtPause(id){const comm=CONCESSIONS_DATA.find(c=>c.id===selectedMgmtCommId);const btD=selectedMgmtBedType?comm?.bedTypes.find(b=>b.type===selectedMgmtBedType):null;
@@ -475,7 +765,7 @@ function removeMgmtConc(id){if(!confirm('Remove this concession?'))return;const 
   if(selectedMgmtUnitId&&btD){const unit=btD.units.find(u=>u.id===selectedMgmtUnitId);if(unit)recomputeUnitStack(unit,comm,btD);}
   renderMgmtPanel();renderMgmtNav(getFilteredData());showToast('Concession removed');}
 
-function saveAutoParams(){const comm=CONCESSIONS_DATA.find(c=>c.id===selectedMgmtCommId);const bt=selectedMgmtBedType?comm?.bedTypes.find(b=>b.type===selectedMgmtBedType):null;const params={targetCoverage:parseInt(document.getElementById('ap_coverage').value),triggerDOM:parseInt(document.getElementById('ap_dom').value),defaultType:document.getElementById('ap_defaultType').value,defaultAmount:parseInt(document.getElementById('ap_defaultAmt').value),maxCap:parseInt(document.getElementById('ap_maxCap').value),expireAfterDays:parseInt(document.getElementById('ap_expireDays').value)};if(bt)bt.autoParams=params;else comm.autoParams=params;showToast('Parameters saved');}
+function saveAutoParams(){const comm=CONCESSIONS_DATA.find(c=>c.id===selectedMgmtCommId);const bt=selectedMgmtBedType?comm?.bedTypes.find(b=>b.type===selectedMgmtBedType):null;const params={targetCoverage:parseInt(document.getElementById('ap_coverage').value),triggerVacancyDays:parseInt(document.getElementById('ap_vacancyDays').value),defaultType:document.getElementById('ap_defaultType').value,defaultAmount:parseInt(document.getElementById('ap_defaultAmt').value),maxCap:parseInt(document.getElementById('ap_maxCap').value),expireAfterDays:parseInt(document.getElementById('ap_expireDays').value)};if(bt)bt.autoParams=params;else comm.autoParams=params;showToast('Parameters saved');}
 
 // Orchestrator
 function renderConcessionsPage(){

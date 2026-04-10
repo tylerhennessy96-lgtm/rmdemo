@@ -13,7 +13,13 @@ const METROS = {
   'Colorado': ['All Metros', 'Denver', 'Boulder'],
 };
 
-const COMMUNITIES = [
+const ALL_AMENITIES = ['Pool','Concierge','Parking Garage','Co-working Lounge','Fitness Center','Pet Friendly','Rooftop Deck','EV Charging','Dog Park','Package Lockers','Business Center','Bike Storage'];
+
+function _randAmenities() {
+  return ALL_AMENITIES.filter(() => Math.random() > 0.45);
+}
+
+const _COMMUNITIES_RAW = [
   { id: 'WCC-001', name: 'Windsor at Falcon Creek',    state: 'Texas', metro: 'Dallas-Fort Worth', rm: 'Sarah Mitchell',  cd: 'James Holbrook' },
   { id: 'WCC-002', name: 'Windsor Meadows',            state: 'Texas', metro: 'Dallas-Fort Worth', rm: 'Sarah Mitchell',  cd: 'James Holbrook' },
   { id: 'WCC-003', name: 'Windsor at Viridian',        state: 'Texas', metro: 'Dallas-Fort Worth', rm: 'Sarah Mitchell',  cd: 'Dana Cortez'    },
@@ -27,6 +33,13 @@ const COMMUNITIES = [
   { id: 'WCC-011', name: 'Windsor at Dulles',          state: 'Virginia', metro: 'Northern Virginia', rm: 'Amy Chen',       cd: 'Steve Nguyen'   },
   { id: 'WCC-012', name: 'Windsor at Kingstowne',      state: 'Virginia', metro: 'Northern Virginia', rm: 'Amy Chen',       cd: 'Steve Nguyen'   },
 ];
+
+const COMMUNITIES = _COMMUNITIES_RAW.map((c, i) => ({
+  ...c,
+  class: i < 6 ? 'A' : 'B',
+  yearBuilt: Math.floor(Math.random() * 31 + 1985),
+  amenities: _randAmenities(),
+}));
 
 const REVENUE_MANAGERS = ['All RMs', 'Sarah Mitchell', 'Tom Bridges', 'Priya Nair', 'Carlos Reyes', 'Amy Chen'];
 const COMMUNITY_DIRECTORS = ['All CDs', 'James Holbrook', 'Dana Cortez', 'Renee Park', 'Marcus Webb', 'Linda Foss', 'Steve Nguyen'];
@@ -70,12 +83,18 @@ function makeUnits(communityId, bedType, count, baseRent) {
     const recRent = baseRent + 20;
     const alertPool = ['concession', 'comp', 'optimizer', 'manual'];
     const alerts = alertPool.filter(() => Math.random() > 0.65);
+    const grossRent = priorRent + [0,50,100,150][Math.floor(Math.random()*4)];
     return {
       id: `${communityId}-${bedType.replace(' ', '')}-${num}`,
       status,
       moveOut,
       availDate,
       priorRent,
+      grossRent,
+      hasPriorConcession: grossRent > priorRent,
+      floorplan: ['Studio','1BR/1BA','1BR/2BA','2BR/1BA','2BR/2BA','3BR/2BA'][Math.floor(Math.random()*6)],
+      area: Math.floor(Math.random()*600+450),
+      floor: Math.floor(Math.random()*8+1),
       initialPrice: baseRent,
       priorPeriodPrice: baseRent - 40,
       recRent,
@@ -88,6 +107,7 @@ function makeUnits(communityId, bedType, count, baseRent) {
       alerts,
       note: makeNote(),
       rcStatus: ['RC','AF','HA',null,null,null][Math.floor(Math.random()*6)],
+      anchorPrice: Math.round(recRent * (0.96 + Math.random() * 0.06) / 10) * 10,
     };
   });
 }
@@ -183,7 +203,14 @@ const PARAM_DEFAULTS = {
   freeDaysOnNotice:2, freeDaysVacant:2, onNoticeMax:15, vacantMax:30,
   onNoticeRecovery:100, vacantRecovery:100,
   renewalLeadDays:90, relConcession:0, inheritBestPrice:false,
+  roundingMethod:'nearest', roundingAmount:10,
 };
+
+const COMPETITOR_EXCLUSIONS = [
+  { id:'excl-1', jurisdiction:'Texas',        level:'State', status:'Under Review', excluded:false, effectiveDate:'01/01/25', notes:'Monitoring TX AG guidance on RealPage litigation' },
+  { id:'excl-2', jurisdiction:'Georgia',      level:'State', status:'Active',       excluded:true,  effectiveDate:'06/01/24', notes:'Excluded per legal counsel recommendation' },
+  { id:'excl-3', jurisdiction:'New York City',level:'City',  status:'Active',       excluded:true,  effectiveDate:'01/01/24', notes:'NYC Local Law 102 compliance' },
+];
 
 const PARAMETERS_DATA = COMMUNITIES.map(c => ({
   ...c,
@@ -223,6 +250,9 @@ function makeRenewalUnits(commId, bedType, count, baseRent) {
       leaseEnd, leaseEndDays, daysToOffer, leaseTerm, leasePrice, concsAmt, netEffLeasePrice,
       renewalOfferPrice, renewalOfferTerm: 12, renewalPricePct, deltaToNewLease, newLeasePrice,
       status,
+      attValue: [80,100,120,150,175,200][Math.floor(Math.random()*6)],
+      floorplan: ['Studio','1BR/1BA','1BR/2BA','2BR/1BA','2BR/2BA','3BR/2BA'][Math.floor(Math.random()*6)],
+      area: Math.floor(Math.random()*600+450),
       alerts: ['concession','comp','optimizer','manual'].filter(()=>Math.random()>0.7),
     };
   });
@@ -238,11 +268,163 @@ const RENEWALS_DATA = PRICING_DATA.map(comm => ({
 
 // Concession Management — priority-based stacking
 const CONCESSION_TYPE_OPTIONS=['Fixed Discount','Free Period','Waived Fee','Reduced Deposit','Gift Card','Percent Discount'];
+const CONCESSION_VALUE_TYPES = [
+  { id: 'absolute',     label: '$ Amount',          desc: 'One-time dollar discount' },
+  { id: 'relative',     label: '% of Monthly Rent', desc: 'Percentage off each month' },
+  { id: 'flat_monthly', label: 'Flat Monthly $',    desc: 'Fixed $ reduction per month for lease term' },
+  { id: 'free_period',  label: 'Months Free',       desc: 'X months free within the lease' },
+];
 const _fmtD=d=>(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0')+'/'+String(d.getFullYear()).slice(2);
+const _RM_NAMES = ['Sarah Mitchell','Tom Bridges','Priya Nair','Carlos Reyes','Amy Chen'];
 
-function computeUnitConcessions(baseRent,concessions){const active=concessions.filter(c=>c.status==='Active').sort((a,b)=>a.priority-b.priority);if(!active.length)return{totalAmount:0,effectiveRent:baseRent,stackedList:[]};const ns=active.find(c=>!c.stackable);let applied=ns?active.filter(c=>c.priority<ns.priority||c.id===ns.id):active;const totalAmount=applied.reduce((s,c)=>{if(c.valueType==='relative')return s+Math.round(baseRent*c.value/100);if(c.valueType==='free_period')return s+Math.round(baseRent*c.value/12);return s+c.value;},0);return{totalAmount,effectiveRent:Math.max(0,baseRent-totalAmount),stackedList:applied};}
+const MONTHLY_BY_TYPE = {
+  'Fixed Discount': true,
+  'Free Period': true,
+  'Percent Discount': true,
+  'Waived Application Fee': false,
+  'Waived Parking Fee': false,
+  'Waived Fee': false,
+  'Reduced Deposit': false,
+  'Gift Card': false,
+  'Look & Lease': false,
+};
 
-function generateConcessions(comm,bt,unitId,level){const baseRent=bt.recRent;const typeOpts={community:['Waived Fee','Reduced Deposit','Gift Card'],bedtype:['Fixed Discount','Free Period','Percent Discount','Waived Fee'],unit:['Fixed Discount','Free Period','Percent Discount','Waived Fee','Gift Card']};const prob={community:0.5,bedtype:0.55,unit:0.4};if(Math.random()>prob[level])return[];const count=level==='unit'?(Math.random()>0.7?2:1):(Math.random()>0.6?2:1);return Array.from({length:count},(_,i)=>{const type=typeOpts[level][Math.floor(Math.random()*typeOpts[level].length)];const valueType=type==='Free Period'?'free_period':type==='Percent Discount'?'relative':'absolute';const value=valueType==='relative'?Math.floor(Math.random()*8)+2:valueType==='free_period'?Math.floor(Math.random()*2)+1:[50,75,100,150,200,250,300][Math.floor(Math.random()*7)];const displayAmount=valueType==='relative'?Math.round(baseRent*value/100):valueType==='free_period'?Math.round(baseRent*value/12):value;const priority=i+1+(level==='community'?0:level==='bedtype'?2:4);const stackable=Math.random()>0.25;const dr=Math.floor(Math.random()*60)-5;const da=Math.floor(Math.random()*40)+5;const status=dr<0?'Expired':Math.random()>0.85?'Paused':'Active';const leaseType=level==='community'?'Both':Math.random()>0.5?'New Lease':'Renewal';const sd=new Date(2025,2,1);const ed=new Date(2025,3,8);ed.setDate(ed.getDate()+Math.max(0,dr));const lo=level!=='unit'?Math.floor(Math.random()*15)+3:null;const lt=lo?Math.floor(lo*(Math.random()*0.5+0.15)):null;return{id:'CONC-'+level.toUpperCase()+'-'+(unitId??bt.type)+'-'+comm.id+'-'+i,level,commId:comm.id,commName:comm.name,bedType:bt?.type??null,unitId:unitId??null,leaseType,type,value,valueType,displayAmount,priority,stackable,status,daysActive:da,daysRemaining:dr,startDate:_fmtD(sd),endDate:_fmtD(ed),excludeAffordable:Math.random()>0.7,excludeRC:Math.random()>0.6,leasesOfferedTo:lo,leasesTaken:lt,uptakeRate:lo&&lt?parseFloat((lt/lo*100).toFixed(1)):null,totalCost:lt?lt*displayAmount:null,taken:level==='unit'?Math.random()>0.5:null,daysVacant:level==='unit'?Math.floor(Math.random()*45)+5:null,daysToSign:level==='unit'&&Math.random()>0.5?Math.floor(Math.random()*20)+2:null};});}
+function computeUnitConcessions(baseRent,concessions){
+  const active=concessions.filter(c=>c.status==='Active').sort((a,b)=>a.priority-b.priority);
+  if(!active.length)return{totalAmount:0,effectiveRent:baseRent,stackedList:[]};
+  const ns=active.find(c=>!c.stackable);
+  let applied=ns?active.filter(c=>c.priority<ns.priority||c.id===ns.id):active;
+  const totalAmount=applied.reduce((sum,c)=>{
+    if(!c.monthly)return sum;
+    if(c.valueType==='relative')return sum+Math.round(baseRent*c.value/100);
+    if(c.valueType==='free_period')return sum+Math.round(baseRent*c.value/12);
+    if(c.valueType==='flat_monthly')return sum+c.value;
+    return sum+c.value;
+  },0);
+  return{totalAmount,effectiveRent:Math.max(0,baseRent-totalAmount),stackedList:applied};
+}
+
+function generateConcessions(comm, bt, unitId, level) {
+  const baseRent = bt.recRent;
+  const typeOpts = {
+    community: ['Waived Fee','Reduced Deposit','Gift Card'],
+    bedtype:   ['Fixed Discount','Free Period','Percent Discount','Waived Fee'],
+    unit:      ['Fixed Discount','Free Period','Percent Discount','Waived Fee','Gift Card'],
+  };
+  const prob = { community: 0.5, bedtype: 0.55, unit: 0.4 };
+  if (Math.random() > prob[level]) return [];
+  const count = level === 'unit'
+    ? (Math.random() > 0.7 ? 2 : 1)
+    : (Math.random() > 0.6 ? 2 : 1);
+
+  return Array.from({ length: count }, (_, i) => {
+    const type = typeOpts[level][Math.floor(Math.random() * typeOpts[level].length)];
+    // Pick valueType — Free Period maps to free_period; Percent Discount → relative;
+    // Fixed Discount can be absolute OR flat_monthly; everything else → absolute.
+    let valueType;
+    if (type === 'Free Period') valueType = 'free_period';
+    else if (type === 'Percent Discount') valueType = 'relative';
+    else if (type === 'Fixed Discount') valueType = Math.random() > 0.5 ? 'flat_monthly' : 'absolute';
+    else valueType = 'absolute';
+
+    let value;
+    if (valueType === 'relative') value = Math.floor(Math.random() * 8) + 2;
+    else if (valueType === 'free_period') value = Math.floor(Math.random() * 2) + 1;
+    else if (valueType === 'flat_monthly') value = [25, 50, 75, 100][Math.floor(Math.random() * 4)];
+    else value = [50, 75, 100, 150, 200, 250, 300][Math.floor(Math.random() * 7)];
+
+    let displayAmount;
+    if (valueType === 'relative') displayAmount = Math.round(baseRent * value / 100);
+    else if (valueType === 'free_period') displayAmount = Math.round(baseRent * value / 12);
+    else if (valueType === 'flat_monthly') displayAmount = value;
+    else displayAmount = value;
+
+    const priority = i + 1 + (level === 'community' ? 0 : level === 'bedtype' ? 2 : 4);
+    const stackable = Math.random() > 0.25;
+    const dr = Math.floor(Math.random() * 60) - 5;
+    const da = Math.floor(Math.random() * 40) + 5;
+    const status = dr < 0 ? 'Expired' : Math.random() > 0.85 ? 'Paused' : 'Active';
+    const leaseType = level === 'community' ? 'Both' : Math.random() > 0.5 ? 'New Lease' : 'Renewal';
+    const sd = new Date(2025, 2, 1);
+    const ed = new Date(2025, 3, 8);
+    ed.setDate(ed.getDate() + Math.max(0, dr));
+    const startDate = _fmtD(sd);
+    const endDate = _fmtD(ed);
+    const lo = level !== 'unit' ? Math.floor(Math.random() * 15) + 3 : null;
+    const lt = lo ? Math.floor(lo * (Math.random() * 0.5 + 0.15)) : null;
+
+    // Term-specific eligibility (~30% of concessions): list of enabled term lengths
+    const termSpecific = Math.random() > 0.7;
+    const termValues = termSpecific
+      ? [6, 9, 12, 15, 18, 24].filter(() => Math.random() > 0.3)
+      : null;
+
+    // Eligibility
+    const unitStatus = ['all', 'vacant', 'on_notice'][Math.floor(Math.random() * 3)];
+    const minVacancyDays = Math.random() > 0.6 ? Math.floor(Math.random() * 21 + 7) : null;
+
+    // Application: discount vs gross_up
+    const application = Math.random() > 0.8 ? 'gross_up' : 'discount';
+
+    // Audit trail
+    const createdBy = _RM_NAMES[Math.floor(Math.random() * _RM_NAMES.length)];
+    const daysAgo = Math.floor(Math.random() * 60 + 5);
+    const _fmtDate = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const _createdAtDate = new Date();
+    _createdAtDate.setDate(_createdAtDate.getDate() - daysAgo);
+    const createdAt = _fmtDate(_createdAtDate);
+    const editedBy = Math.random() > 0.5 ? _RM_NAMES[Math.floor(Math.random() * _RM_NAMES.length)] : null;
+    let editedAt = null;
+    if (editedBy) {
+      const _ed = new Date();
+      _ed.setDate(_ed.getDate() - Math.floor(Math.random() * daysAgo));
+      editedAt = _fmtDate(_ed);
+    }
+    const history = Array.from({ length: Math.floor(Math.random() * 3) + 1 }, (_, hi) => {
+      const fields = ['amount', 'status', 'endDate', 'leaseType'];
+      const field = fields[Math.floor(Math.random() * fields.length)];
+      const hd = new Date();
+      hd.setDate(hd.getDate() - Math.max(0, daysAgo - hi * 7));
+      return {
+        date: _fmtDate(hd),
+        editedBy: _RM_NAMES[Math.floor(Math.random() * _RM_NAMES.length)],
+        field,
+        oldValue: field === 'amount' ? '$' + (value - 50)
+          : field === 'status' ? 'Paused'
+          : field === 'endDate' ? '03/31/25'
+          : 'New Lease',
+        newValue: field === 'amount' ? '$' + value
+          : field === 'status' ? 'Active'
+          : field === 'endDate' ? endDate
+          : leaseType,
+      };
+    });
+
+    return {
+      id: 'CONC-' + level.toUpperCase() + '-' + (unitId ?? bt.type) + '-' + comm.id + '-' + i,
+      level, commId: comm.id, commName: comm.name,
+      bedType: bt?.type ?? null, unitId: unitId ?? null,
+      leaseType, type, value, valueType, displayAmount,
+      monthly: MONTHLY_BY_TYPE[type] ?? true,
+      priority, stackable, status,
+      daysActive: da, daysRemaining: dr,
+      startDate, endDate,
+      excludeAffordable: Math.random() > 0.7,
+      excludeRC: Math.random() > 0.6,
+      leasesOfferedTo: lo, leasesTaken: lt,
+      uptakeRate: lo && lt ? parseFloat((lt / lo * 100).toFixed(1)) : null,
+      totalCost: lt ? lt * displayAmount : null,
+      taken: level === 'unit' ? Math.random() > 0.5 : null,
+      daysVacant: level === 'unit' ? Math.floor(Math.random() * 45) + 5 : null,
+      daysToSign: level === 'unit' && Math.random() > 0.5 ? Math.floor(Math.random() * 20) + 2 : null,
+      // New fields
+      termSpecific, termValues,
+      unitStatus, minVacancyDays,
+      application,
+      createdBy, createdAt, editedBy, editedAt, history,
+    };
+  });
+}
 
 
 const CONCESSIONS_DATA=PRICING_DATA.map(comm=>{
@@ -300,9 +482,11 @@ const COMPETITOR_DATA=COMMUNITIES.map(comm=>{
     const wAvg=wbt?.avgAmount??0;
     let windsorResponse;
     if(wAvg===0)windsorResponse='No concession';else if(wAvg>amount+50)windsorResponse='Exceeding';else if(Math.abs(wAvg-amount)<=50)windsorResponse='Matched';else windsorResponse='Below market';
+    const compBaseRent=Math.round(baseRent*(0.97+Math.random()*0.06));
+    const netEffRent=amount>0?compBaseRent-amount:compBaseRent;
     const hLen=Math.floor(Math.random()*4)+2;
     const history=Array.from({length:hLen},(_,h)=>{const hd=new Date(fs);hd.setDate(hd.getDate()-(h*15));return{date:fmtD(hd),amount:amount+Math.floor(Math.random()*100-50),type:COMP_CONCESSION_TYPES[Math.floor(Math.random()*6)],status:h===0?status:'Expired'};});
-    return{id:'COMP-'+comm.id+'-'+i,commId:comm.id,commName:comm.name,metro:comm.metro,name,bedType,concType,amount,firstSeen:fmtD(fs),lastVerified:fmtD(lv),verifiedDaysAgo:vda,status,windsorResponse,windsorAvgAmount:wAvg,flaggedForResponse:false,unitCoverage:parseFloat((Math.random()*50+15).toFixed(1)),history};
+    return{id:'COMP-'+comm.id+'-'+i,commId:comm.id,commName:comm.name,metro:comm.metro,name,bedType,concType,amount,baseRent:compBaseRent,netEffRent,firstSeen:fmtD(fs),lastVerified:fmtD(lv),verifiedDaysAgo:vda,status,windsorResponse,windsorAvgAmount:wAvg,flaggedForResponse:false,unitCoverage:parseFloat((Math.random()*50+15).toFixed(1)),history};
   });
   const activeComps=competitors.filter(c=>c.status==='Active');
   const avgCompAmount=activeComps.length>0?Math.round(activeComps.reduce((s,c)=>s+c.amount,0)/activeComps.length):0;

@@ -63,17 +63,20 @@
     <span class="status-legend-item"><span style="background:#60a5fa;color:#1a1d23;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">HA</span>Housing Assistance</span>
   </div>
 
+  <div id="renewalsStatsBar" style="background:var(--surface);border-bottom:1px solid var(--border);padding:6px 20px;display:flex;gap:0;align-items:center;flex-shrink:0;"></div>
+
   <div class="main">
     <div class="table-wrap" id="tableWrap">
       <table class="data-table" id="renewalsTable">
         <thead>
           <tr>
             <th style="min-width:180px;">Property<span class="th-sub">Available/total units</span></th>
-            <th style="width:38px;">RC</th>
+            <th style="width:50px;">RC</th>
             <th>Lease End</th>
             <th>Days to<br><span class="th-sub">Lease End</span></th>
             <th>Days to<br><span class="th-sub">Offer</span></th>
             <th>Lease ID</th>
+            <th style="text-align:right;">Att.<br><span class="th-sub">Value</span></th>
             <th>Lease<br><span class="th-sub">Term</span></th>
             <th>Lease Price</th>
             <th>Concs.<br><span class="th-sub">Amt</span></th>
@@ -120,9 +123,81 @@
   </div>
 </div>
 
+<!-- ── Att. Value Modal ── -->
+<div class="modal-backdrop" id="attValueModal">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Attribute Value Breakdown</div>
+        <div class="modal-subtitle" id="attValueModalUnit"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('attValueModal')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:16px;padding:10px 14px;background:var(--body-bg);border-radius:8px;border:1px solid var(--border);margin-bottom:14px;">
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Floorplan</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text-primary);" id="attFloorplan">1BR/1BA</div>
+        </div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Area</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text-primary);" id="attArea">750 sq ft</div>
+        </div>
+      </div>
+      <table class="modal-table">
+        <thead>
+          <tr>
+            <th>Attribute</th>
+            <th>Value ($)</th>
+          </tr>
+        </thead>
+        <tbody id="attValueTableBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('attValueModal')">Exit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Community Attributes Modal ── -->
+<div class="modal-backdrop" id="commAttrModal">
+  <div class="modal" style="width:520px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Community Attributes</div>
+        <div class="modal-subtitle" id="commAttrName"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('commAttrModal')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="commAttrFacts" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;"></div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Amenities</div>
+      <div id="commAttrAmenities" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Unit Attributes</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span style="font-size:13px;color:var(--text-secondary);">Walk in closet</span>
+          <span style="font-size:13px;color:var(--text-secondary);">Traffic proximity</span>
+          <span style="font-size:13px;color:var(--text-secondary);">Balcony</span>
+          <span style="font-size:13px;color:var(--text-secondary);">Floor number</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('commAttrModal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Renewal Term Modal -->
 <div class="modal-backdrop" id="renewalTermModal">
-  <div class="modal" style="width:520px;">
+  <div class="modal" style="width:90vw;max-width:90vw;max-height:92vh;display:flex;flex-direction:column;">
     <div class="modal-header">
       <div>
         <div class="modal-title">Renewal Terms</div>
@@ -132,13 +207,20 @@
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
       </button>
     </div>
-    <div class="modal-body" style="overflow-y:auto;">
-      <table class="modal-table">
-        <thead><tr><th>Term <span class="th-sub">months</span></th><th>Price <span class="th-sub">/month</span></th><th>Concs. Amt.</th><th>Net Eff. Price</th></tr></thead>
-        <tbody id="renewalTermBody"></tbody>
-      </table>
+    <div class="modal-body" style="padding:20px 24px;overflow-y:auto;">
+      <div id="rtScrollContainer" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:8px;">
+        <div id="rtChartWrap" style="position:relative;height:300px;overflow:hidden;">
+          <canvas id="rtChart"></canvas>
+        </div>
+        <table id="rtHorizTable" style="table-layout:fixed;width:max-content;border-collapse:collapse;font-size:12.5px;border-top:1px solid var(--border);"></table>
+      </div>
+      <style>
+        #rtScrollContainer::-webkit-scrollbar { height:6px; }
+        #rtScrollContainer::-webkit-scrollbar-track { background:var(--border); border-radius:3px; }
+        #rtScrollContainer::-webkit-scrollbar-thumb { background:var(--accent); border-radius:3px; }
+      </style>
     </div>
-    <div class="modal-footer">
+    <div style="display:flex;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--border);">
       <button class="btn btn-ghost" onclick="closeModal('renewalTermModal')">Exit</button>
     </div>
   </div>
@@ -251,7 +333,7 @@ function renderRenewalsTable(){
     const propOpen=expandedRenewalProps.has(comm.id);
     const total=comm.bedTypes.reduce((s,bt)=>s+bt.renewalUnits.length,0);
     const tr=document.createElement('tr');tr.className='row-property';
-    tr.innerHTML=`<td><button class="expand-btn ${propOpen?'open':''}" onclick="toggleRenewalProp('${comm.id}')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,2 8,6 4,10"/></svg></button><strong>${comm.name}</strong><span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${total} renewals</span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
+    tr.innerHTML=`<td><button class="expand-btn ${propOpen?'open':''}" onclick="toggleRenewalProp('${comm.id}')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,2 8,6 4,10"/></svg></button><strong>${comm.name}</strong><button onclick="openCommAttrModal('${comm.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);display:inline-flex;align-items:center;padding:0 4px;vertical-align:middle;" title="View community attributes"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><line x1="7" y1="6" x2="7" y2="10"/><circle cx="7" cy="4.5" r=".6" fill="currentColor"/></svg></button><span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${total} renewals</span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
     tbody.appendChild(tr);
     if(!propOpen)return;
 
@@ -259,7 +341,7 @@ function renderRenewalsTable(){
       const btKey=comm.id+bt.type;
       const btOpen=expandedRenewalBedTypes[btKey];
       const btr=document.createElement('tr');btr.className='row-bedtype';
-      btr.innerHTML=`<td style="padding-left:28px;"><button class="expand-btn ${btOpen?'open':''}" onclick="toggleRenewalBedType('${btKey}')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,2 8,6 4,10"/></svg></button>${bt.type}<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${bt.renewalUnits.length} units</span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
+      btr.innerHTML=`<td style="padding-left:28px;"><button class="expand-btn ${btOpen?'open':''}" onclick="toggleRenewalBedType('${btKey}')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,2 8,6 4,10"/></svg></button>${bt.type}<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${bt.renewalUnits.length} units</span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
       tbody.appendChild(btr);
       if(!btOpen)return;
 
@@ -267,7 +349,8 @@ function renderRenewalsTable(){
       sorted.forEach(u=>{
         if(statusF.length&&!statusF.includes(u.status))return;
         if(rcF.length&&!rcF.includes(u.rcStatus??'null'))return;
-        const rc=u.rcStatus&&rcCfg[u.rcStatus]?`<span style="display:inline-flex;align-items:center;justify-content:center;background:${rcCfg[u.rcStatus].bg};color:${rcCfg[u.rcStatus].color};font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;min-width:20px;">${u.rcStatus}</span>`:'';
+        const rcLink = u.rcStatus && ['RC','AF','HA'].includes(u.rcStatus) ? `<a href="rent-control.html?tab=management&commId=${comm.id}&bedType=${encodeURIComponent(comm.bedTypes.find(b=>b.renewalUnits.some(x=>x.id===u.id))?.type ?? '')}&unitId=${encodeURIComponent(u.id)}" title="Configure rent control for this unit" style="display:inline-flex;align-items:center;margin-left:4px;color:var(--text-muted);text-decoration:none;vertical-align:middle;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8"/><polyline points="9,1 13,1 13,5"/><line x1="7" y1="7" x2="13" y2="1"/></svg></a>` : '';
+        const rc=u.rcStatus&&rcCfg[u.rcStatus]?`<span style="display:inline-flex;align-items:center;justify-content:center;background:${rcCfg[u.rcStatus].bg};color:${rcCfg[u.rcStatus].color};font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;min-width:20px;">${u.rcStatus}</span>${rcLink}`:'';
         const daysC=u.leaseEndDays<=30?'#e05252':u.leaseEndDays<=60?'#f5a623':'var(--text-primary)';
         let dtoDisp;
         if(u.status==='Offer Sent'||u.status==='Accepted'||u.status==='Declined'||u.status==='Negotiating'){
@@ -296,6 +379,7 @@ function renderRenewalsTable(){
           <td style="color:${daysC};font-weight:500;">${u.leaseEndDays}d</td>
           <td>${dtoDisp}</td>
           <td style="font-size:11.5px;color:var(--text-muted);">${u.leaseId}</td>
+          <td style="text-align:right;">${u.attValue?`<button onclick="openAttValueModal('${u.id}', ${u.attValue})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:500;text-decoration:underline;text-underline-offset:2px;padding:0;">$${u.attValue}</button>`:'<span style="color:var(--text-muted);">\u2014</span>'}</td>
           <td style="text-align:center;">${u.leaseTerm}mo</td>
           <td>$${u.leasePrice.toLocaleString()}</td>
           <td style="color:var(--text-secondary);">${u.concsAmt>0?'$'+u.concsAmt:'\u2014'}</td>
@@ -310,10 +394,51 @@ function renderRenewalsTable(){
       });
     });
   });
+
+  renderRenewalsStatsBar(data);
 }
 
 function toggleRenewalProp(id){if(expandedRenewalProps.has(id))expandedRenewalProps.delete(id);else expandedRenewalProps.add(id);renderRenewalsTable();}
 function toggleRenewalBedType(key){expandedRenewalBedTypes[key]=!expandedRenewalBedTypes[key];renderRenewalsTable();}
+
+// ── Stats bar ────────────────────────────────────────────
+function renderRenewalsStatsBar(filteredData) {
+  const allUnits = filteredData.flatMap(c => c.bedTypes.flatMap(bt => bt.renewalUnits));
+
+  const accepted = allUnits.filter(u => u.status === 'Accepted');
+  const avgRenewalRate = allUnits.length > 0
+    ? parseFloat((accepted.length / allUnits.length * 100).toFixed(1))
+    : 0;
+
+  const withPrices = allUnits.filter(u => u.renewalOfferPrice && u.leasePrice && u.leasePrice > 0);
+  const avgPriceChange = withPrices.length > 0
+    ? parseFloat((withPrices.reduce((s, u) => s + ((u.renewalOfferPrice - u.leasePrice) / u.leasePrice * 100), 0) / withPrices.length).toFixed(1))
+    : 0;
+
+  const withDelta = allUnits.filter(u => u.deltaToNewLease != null);
+  const avgDeltaToNew = withDelta.length > 0
+    ? parseFloat((withDelta.reduce((s, u) => s + u.deltaToNewLease, 0) / withDelta.length).toFixed(1))
+    : 0;
+
+  const stats = [
+    { label: 'Avg. Renewal Rate', value: avgRenewalRate + '%',
+      color: avgRenewalRate > 60 ? '#15803d' : avgRenewalRate > 40 ? '#92400e' : '#e05252' },
+    { label: 'Avg. Price Change (Net Eff.)', value: (avgPriceChange >= 0 ? '+' : '') + avgPriceChange + '%',
+      color: avgPriceChange >= 0 ? '#15803d' : '#e05252' },
+    { label: 'Avg. Delta to New Lease', value: (avgDeltaToNew >= 0 ? '+' : '') + avgDeltaToNew + '%',
+      color: avgDeltaToNew >= 0 ? '#15803d' : '#e05252' },
+  ];
+
+  const el = document.getElementById('renewalsStatsBar');
+  if (!el) return;
+  el.innerHTML = stats.map((s, i) => `
+    ${i > 0 ? '<div style="width:1px;height:24px;background:var(--border);flex-shrink:0;"></div>' : ''}
+    <div style="display:flex;flex-direction:column;align-items:center;padding:0 20px;flex-shrink:0;">
+      <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;margin-bottom:1px;">${s.label}</div>
+      <div style="font-size:13px;font-weight:700;color:${s.color};white-space:nowrap;">${s.value}</div>
+    </div>
+  `).join('');
+}
 
 const selectedForPush = new Set();
 
@@ -361,32 +486,302 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-backdrop').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
 
-function openRenewalTermModal(unitId){
-  document.getElementById('renewalTermUnit').textContent=unitId;
-  let unit=null;
-  RENEWALS_DATA.forEach(c=>c.bedTypes.forEach(bt=>{const u=bt.renewalUnits.find(u=>u.id===unitId);if(u)unit=u;}));
-  if(!unit)return;
-  const base=unit.renewalOfferPrice;
-  const rows=[];
-  for(let i=0;i<23;i++){
-    const term=i+2;
-    let prem=0,conc=0;
-    const noise=Math.floor(Math.random()*30)-15;
-    if(term<=5){prem=300+Math.floor(Math.random()*100);conc=0;}
-    else if(term<=8){prem=80+Math.floor(Math.random()*40);conc=100+Math.floor(Math.random()*100);}
-    else if(term<=11){prem=20+Math.floor(Math.random()*30);conc=100+Math.floor(Math.random()*100);}
-    else if(term===12){prem=0;conc=100+Math.floor(Math.random()*100);}
-    else if(term<=18){prem=-(20+Math.floor(Math.random()*30));conc=150+Math.floor(Math.random()*150);}
-    else{prem=-(40+Math.floor(Math.random()*40));conc=150+Math.floor(Math.random()*150);}
-    const price=base+prem+noise;
-    const net=price-conc;
-    const isRec=term===unit.renewalOfferTerm;
-    const rowBg=isRec?' style="background:rgba(232,0,125,0.06);"':'';
-    const recLabel=isRec?'<span style="color:var(--accent);font-size:10px;margin-left:6px;">\u2605 Best</span>':'';
-    rows.push(`<tr${rowBg}><td>${term}${recLabel}</td><td>$${price.toLocaleString()}</td><td>$${conc.toLocaleString()}</td><td>$${net.toLocaleString()}</td></tr>`);
-  }
-  document.getElementById('renewalTermBody').innerHTML=rows.join('');
+// ── Renewal Term Modal ───────────────────────────────────
+let currentRTUnit = null;
+let rtConcessions = [];
+
+function openRenewalTermModal(unitId) {
+  let foundUnit = null, foundComm = null;
+  RENEWALS_DATA.forEach(c => c.bedTypes.forEach(bt => {
+    const u = bt.renewalUnits.find(u => u.id === unitId);
+    if (u) { foundUnit = u; foundComm = c; }
+  }));
+  if (!foundUnit) return;
+  currentRTUnit = { ...foundUnit, commId: foundComm.id };
+  document.getElementById('renewalTermUnit').textContent = unitId;
+  rebuildRenewalTermModal(currentRTUnit);
   openModal('renewalTermModal');
+}
+
+function rebuildRenewalTermModal(unit) {
+  if (!unit) return;
+  const base = unit.leasePrice || unit.renewalOfferPrice || 1800;
+  const terms = Array.from({length: 23}, (_, i) => i + 2); // 2..24
+
+  const prices = [];
+  const concessions = [];
+  const netEffs = [];
+  terms.forEach(term => {
+    let premium = 0, conc = 0;
+    const noise = Math.floor(Math.random() * 30) - 15;
+    if (term <= 3) { premium = 350 + Math.floor(Math.random() * 50); conc = 0; }
+    else if (term <= 5) { premium = 200 + Math.floor(Math.random() * 80); conc = 0; }
+    else if (term <= 8) { premium = 60 + Math.floor(Math.random() * 40); conc = 100 + Math.floor(Math.random() * 100); }
+    else if (term <= 11) { premium = 10 + Math.floor(Math.random() * 20); conc = 100 + Math.floor(Math.random() * 100); }
+    else if (term === 12) { premium = 0; conc = 100 + Math.floor(Math.random() * 100); }
+    else if (term <= 18) { premium = -(20 + Math.floor(Math.random() * 30)); conc = 150 + Math.floor(Math.random() * 150); }
+    else { premium = -(40 + Math.floor(Math.random() * 40)); conc = 150 + Math.floor(Math.random() * 150); }
+    const price = base + premium + noise;
+    prices.push(Math.round(price));
+    concessions.push(conc);
+    netEffs.push(Math.round(price - conc));
+  });
+  rtConcessions = concessions;
+
+  // Recommended term = lowest net effective rent
+  const recTermIndex = netEffs.indexOf(Math.min(...netEffs));
+  const recTerm = terms[recTermIndex];
+
+  const moveIn = new Date();
+  const expiryLabels = terms.map(t => {
+    const exp = new Date(moveIn);
+    exp.setMonth(exp.getMonth() + t);
+    return exp.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+  });
+
+  const labelColW = 130;
+  const dataColW = 80;
+  const recColCellBg = 'rgba(232,0,125,0.05)';
+  const recHeadBg = 'rgba(232,0,125,0.12)';
+  const neBg = 'rgba(232,0,125,0.04)';
+  const stickyLabel = `position:sticky;left:0;background:var(--surface);z-index:2;`;
+  const recHeadStyle = `background:${recHeadBg};color:var(--accent);border-top:2px solid var(--accent);`;
+
+  const thead = `
+    <thead>
+      <tr style="height:36px;">
+        <th style="${stickyLabel}width:auto;padding:8px 12px;font-size:13px;font-weight:700;color:var(--text-primary);text-align:left;border-bottom:2px solid var(--border);vertical-align:middle;">Term</th>
+        ${terms.map(t => {
+          const isRec = t === recTerm;
+          return `<th style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:13px;font-weight:700;border-bottom:2px solid var(--border);vertical-align:middle;${isRec ? recHeadStyle : 'color:var(--text-primary);'}">${t}${isRec ? '<div style="font-size:9px;color:var(--accent);font-weight:600;margin-top:1px;">★ Rec</div>' : ''}</th>`;
+        }).join('')}
+      </tr>
+      <tr style="height:36px;">
+        <th style="${stickyLabel}width:auto;padding:8px 12px;font-size:11px;color:var(--text-muted);font-weight:400;text-align:left;border-bottom:1px solid var(--border);vertical-align:middle;">Expiry Date</th>
+        ${expiryLabels.map((l, i) => `<th style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:11px;color:var(--text-muted);font-weight:400;border-bottom:1px solid var(--border);vertical-align:middle;${terms[i] === recTerm ? 'background:'+recColCellBg+';' : ''}">${l}</th>`).join('')}
+      </tr>
+    </thead>`;
+
+  const tbody = `
+    <tbody>
+      <tr style="height:36px;">
+        <td style="${stickyLabel}width:auto;padding:8px 12px;font-size:12.5px;font-weight:600;vertical-align:middle;">Price / mo</td>
+        ${prices.map((p, i) => `<td style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:12.5px;font-weight:600;vertical-align:middle;${terms[i] === recTerm ? 'background:'+recColCellBg+';' : ''}">$${p.toLocaleString()}</td>`).join('')}
+      </tr>
+      <tr style="height:36px;">
+        <td style="${stickyLabel}width:auto;padding:8px 12px;font-size:12px;color:var(--accent);font-weight:500;vertical-align:middle;">Concs. Amt</td>
+        ${concessions.map((c, i) => `<td style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:12px;color:var(--accent);vertical-align:middle;${terms[i] === recTerm ? 'background:'+recColCellBg+';' : ''}">${c > 0 ? '-$' + c : '—'}</td>`).join('')}
+      </tr>
+      <tr style="height:36px;">
+        <td style="${stickyLabel}width:auto;padding:8px 12px;font-size:13px;font-weight:700;color:var(--text-primary);border-top:2px solid var(--border);background:${neBg};vertical-align:middle;">Net Eff.</td>
+        ${netEffs.map((n, i) => `<td style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:13px;font-weight:700;color:var(--text-primary);border-top:2px solid var(--border);vertical-align:middle;background:${terms[i] === recTerm ? recColCellBg : neBg};">$${n.toLocaleString()}</td>`).join('')}
+      </tr>
+    </tbody>`;
+
+  const tableEl = document.getElementById('rtHorizTable');
+  tableEl.innerHTML = thead + tbody;
+
+  if (window.rtChartInst) window.rtChartInst.destroy();
+  setTimeout(() => {
+    const table = document.getElementById('rtHorizTable');
+    const canvas = document.getElementById('rtChart');
+    const wrap = document.getElementById('rtChartWrap');
+    if (!table || !canvas || !wrap) return;
+    const tableScrollW = table.scrollWidth || (labelColW + dataColW * terms.length);
+
+    wrap.style.width = tableScrollW + 'px';
+    wrap.style.height = '300px';
+    canvas.width = tableScrollW;
+    canvas.height = 300;
+    canvas.style.width = tableScrollW + 'px';
+    canvas.style.height = '300px';
+
+    const termLabels = terms.map(t => String(t));
+
+    window.rtChartInst = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: termLabels,
+        datasets: [
+          {
+            label: 'Gross Rent',
+            data: prices.map((p, i) => ({ x: termLabels[i], y: p })),
+            borderColor: '#e8007d',
+            backgroundColor: '#e8007d',
+            pointBackgroundColor: '#e8007d',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.3,
+            fill: false,
+          },
+          {
+            label: 'Net Effective',
+            data: netEffs.map((n, i) => ({ x: termLabels[i], y: n })),
+            borderColor: '#60a5fa',
+            backgroundColor: '#60a5fa',
+            pointBackgroundColor: '#60a5fa',
+            borderWidth: 2,
+            borderDash: [4,3],
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.3,
+            fill: false,
+          },
+        ],
+      },
+      options: {
+        animation: false,
+        responsive: false,
+        maintainAspectRatio: false,
+        layout: { padding: { left: 0, right: 0, top: 4, bottom: 0 } },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { family: 'DM Sans', size: 11 }, color: '#6b7280' } },
+          tooltip: {
+            backgroundColor: '#1a1d23',
+            borderColor: '#2a2d35',
+            borderWidth: 1,
+            titleColor: '#e5e7eb',
+            bodyColor: '#9ca3af',
+            padding: 10,
+            titleFont: { family: 'DM Sans', size: 12 },
+            bodyFont: { family: 'DM Sans', size: 11 },
+            callbacks: {
+              title: items => `Term ${items[0].label} months`,
+              label: ctx => {
+                const label = ctx.dataset.label;
+                const val = '$' + ctx.parsed.y.toLocaleString();
+                return ` ${label}: ${val}`;
+              },
+              afterBody: items => {
+                const i = items[0].dataIndex;
+                const conc = rtConcessions[i];
+                return conc > 0 ? [` Concession: -$${conc.toLocaleString()}`] : [];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'category',
+            labels: termLabels,
+            display: true,
+            offset: true,
+            bounds: 'data',
+            ticks: { display: false, align: 'center' },
+            grid: { display: true, color: '#e4e6eb', offset: true },
+            border: { display: false },
+          },
+          y: {
+            min: Math.min(...netEffs, ...prices) - 100,
+            max: Math.max(...netEffs, ...prices) + 80,
+            ticks: { color: '#6b7280', font: { family: 'DM Sans', size: 10 }, callback: v => '$' + v.toLocaleString() },
+            grid: { color: '#e4e6eb' },
+          }
+        }
+      }
+    });
+
+    // After chart renders, sync table label column width to actual chart plot left
+    setTimeout(() => {
+      if (!window.rtChartInst) return;
+      const actualPlotLeft = window.rtChartInst.chartArea.left;
+      document.querySelectorAll('#rtHorizTable td:first-child, #rtHorizTable th:first-child').forEach(c => {
+        c.style.width = actualPlotLeft + 'px';
+        c.style.minWidth = actualPlotLeft + 'px';
+      });
+    }, 40);
+  }, 80);
+}
+
+// ── Class Badge ───────────────────────────────────────────
+function classBadge(cls) {
+  const config = {
+    A: { bg: 'rgba(245,158,11,0.12)', color: '#92400e', border: 'rgba(245,158,11,0.3)' },
+    B: { bg: 'rgba(100,116,139,0.1)', color: '#475569', border: 'rgba(100,116,139,0.25)' },
+  };
+  const c = config[cls] ?? config.B;
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;font-size:10px;font-weight:800;background:${c.bg};color:${c.color};border:1px solid ${c.border};flex-shrink:0;">${cls}</span>`;
+}
+
+// ── Amenity icons ─────────────────────────────────────────
+const AMENITY_ICONS = {
+  'Pool': '<path d="M2 10c2-3 4-3 5 0s3 3 5 0"/>',
+  'Concierge': '<circle cx="7" cy="4" r="2.5"/><path d="M2 13c0-3 2.5-5 5-5s5 2 5 5"/>',
+  'Parking Garage': '<rect x="2" y="5" width="10" height="7" rx="1"/><path d="M5 12v2M9 12v2M2 8h10"/>',
+  'Co-working Lounge': '<rect x="2" y="4" width="10" height="7" rx="1"/><line x1="5" y1="11" x2="5" y2="13"/><line x1="9" y1="11" x2="9" y2="13"/><line x1="3" y1="13" x2="11" y2="13"/>',
+  'Fitness Center': '<circle cx="4" cy="7" r="1.5"/><circle cx="10" cy="7" r="1.5"/><line x1="5.5" y1="7" x2="8.5" y2="7"/>',
+  'Pet Friendly': '<circle cx="4" cy="4" r="1.2"/><circle cx="10" cy="4" r="1.2"/><circle cx="7" cy="9" r="2.5"/>',
+  'Rooftop Deck': '<path d="M2 8l5-5 5 5"/><rect x="4" y="8" width="6" height="5"/>',
+  'EV Charging': '<path d="M8 2L5 8h4l-3 6"/><path d="M4 5h2M8 11h2"/>',
+  'Dog Park': '<path d="M4 13V8M4 8C4 5 7 3 7 3s3 2 3 5v5"/><circle cx="10" cy="5" r="1.5"/>',
+  'Package Lockers': '<rect x="2" y="4" width="10" height="8" rx="1"/><line x1="7" y1="4" x2="7" y2="12"/><circle cx="5" cy="8" r=".8" fill="currentColor"/><circle cx="9" cy="8" r=".8" fill="currentColor"/>',
+  'Business Center': '<rect x="3" y="5" width="8" height="7" rx="1"/><path d="M5 5V4a2 2 0 0 1 4 0v1"/>',
+  'Bike Storage': '<circle cx="4" cy="9" r="2.5"/><circle cx="10" cy="9" r="2.5"/><path d="M4 9l3-4 3 4"/><line x1="7" y1="5" x2="9" y2="5"/>',
+};
+
+function openCommAttrModal(commId) {
+  const comm = COMMUNITIES.find(c => c.id === commId);
+  if (!comm) return;
+  const cp = (typeof PRICING_DATA !== 'undefined') ? PRICING_DATA.find(p => p.id === commId) : null;
+  document.getElementById('commAttrName').textContent = comm.name;
+  const facts = [
+    { label: 'Year Built', value: comm.yearBuilt ?? '—' },
+    { label: 'Total Units', value: cp?.totalUnits ?? '—' },
+    { label: 'Class', value: classBadge(comm.class) },
+    { label: 'State', value: comm.state },
+    { label: 'Metro', value: comm.metro },
+    { label: 'Revenue Manager', value: comm.rm },
+  ];
+  document.getElementById('commAttrFacts').innerHTML = facts.map(f => `
+    <div style="background:var(--body-bg);border-radius:6px;border:1px solid var(--border);padding:8px 10px;">
+      <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">${f.label}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${f.value}</div>
+    </div>
+  `).join('');
+  document.getElementById('commAttrAmenities').innerHTML =
+    (comm.amenities ?? []).map(a => `
+      <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(232,0,125,0.07);color:var(--accent);border:1px solid rgba(232,0,125,0.2);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:500;">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">${AMENITY_ICONS[a] ?? '<circle cx="7" cy="7" r="5"/>'}</svg>
+        ${a}
+      </span>
+    `).join('');
+  openModal('commAttrModal');
+}
+
+function openAttValueModal(unitId, totalValue) {
+  document.getElementById('attValueModalUnit').textContent = unitId;
+  // Find unit in RENEWALS_DATA
+  let foundUnit = null;
+  for (const c of RENEWALS_DATA) {
+    for (const bt of c.bedTypes) {
+      const u = bt.renewalUnits.find(u => u.id === unitId);
+      if (u) { foundUnit = u; break; }
+    }
+    if (foundUnit) break;
+  }
+  document.getElementById('attFloorplan').textContent = foundUnit?.floorplan ?? '1BR/1BA';
+  document.getElementById('attArea').textContent = (foundUnit?.area ?? 750) + ' sq ft';
+  const attrs = ['Floor Premium', 'Balcony', 'Walk-in Closet', 'Traffic Proximity', 'Pool Access', 'Parking'];
+  const rawVals = attrs.map(() => Math.random());
+  const rawSum = rawVals.reduce((a, b) => a + b, 0);
+  const values = rawVals.map(v => Math.round(v / rawSum * totalValue));
+  const diff = totalValue - values.reduce((a, b) => a + b, 0);
+  values[values.length - 1] += diff;
+  const tb = document.getElementById('attValueTableBody');
+  tb.innerHTML = attrs.map((attr, i) => `
+    <tr>
+      <td>${attr}</td>
+      <td>$${values[i]}</td>
+    </tr>
+  `).join('') + `
+    <tr style="font-weight:600;border-top:2px solid var(--border);">
+      <td>Total</td>
+      <td>$${totalValue}</td>
+    </tr>
+  `;
+  openModal('attValueModal');
 }
 
 populateFilters();

@@ -82,6 +82,9 @@
     <span class="status-legend-item"><span style="background:#60a5fa;color:#1a1d23;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">HA</span>Housing Assistance</span>
   </div>
 
+  <!-- ── Stats Bar ── -->
+  <div id="pricingStatsBar" style="background:var(--surface);border-bottom:1px solid var(--border);padding:6px 20px;display:flex;gap:6px;align-items:center;flex-wrap:nowrap;overflow-x:auto;"></div>
+
   <!-- ── Main ── -->
   <div class="main">
     <div class="table-wrap" id="tableWrap">
@@ -95,7 +98,8 @@
             <th>Move-out <span class="th-sub">Date</span></th>
             <th>Avail. <span class="th-sub">Date</span></th>
             <th style="width:50px;">Alerts</th>
-            <th>Prior Lease<br><span class="th-sub">Rent</span></th>
+            <th>Prior Lease<br><span class="th-sub">Net Eff.</span></th>
+            <th style="text-align:right;">Anchor<br><span class="th-sub">Price</span></th>
             <th>Rec. Rent<br><span class="th-sub">Expired</span></th>
             <th>Rec. Rent<br><span class="th-sub">Current</span></th>
             <th>Delta, <span class="th-sub">Prior Period</span></th>
@@ -149,6 +153,10 @@
             <span class="exposure-title">Exposure &amp; Price</span>
             <span style="color:#3d4150;margin:0 10px;">|</span>
             <span class="exposure-prop" id="exposurePropName">Select a property</span>
+            <div style="display:flex;align-items:center;gap:4px;margin-left:auto;margin-right:12px;">
+              <button id="toggleDaily" onclick="setChartMode('daily')" style="padding:3px 10px;border-radius:4px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.15);color:#fff;font-weight:600;">Daily</button>
+              <button id="toggleMonthly" onclick="setChartMode('monthly')" style="padding:3px 10px;border-radius:4px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:none;color:#6b7280;font-weight:400;">Monthly</button>
+            </div>
           </div>
           <div class="exposure-inner">
             <div class="exposure-dates">
@@ -226,6 +234,33 @@
       </div>
 
       <div class="adv-section">
+        <div class="adv-section-title">Floorplan</div>
+        <select class="adv-full-select" id="floorplanFilter" onchange="renderTable()">
+          <option value="">All Floorplans</option>
+          <option>Studio</option>
+          <option>1BR/1BA</option>
+          <option>1BR/2BA</option>
+          <option>2BR/1BA</option>
+          <option>2BR/2BA</option>
+          <option>3BR/2BA</option>
+        </select>
+      </div>
+
+      <div class="adv-section">
+        <div class="adv-section-title">Community Class</div>
+        <div style="display:flex;gap:8px;">
+          <label class="ms-option" style="display:inline-flex;align-items:center;gap:6px;">
+            <input type="checkbox" value="A" id="classA" onchange="renderTable()">
+            <span id="classABadgeSlot"></span> Class A
+          </label>
+          <label class="ms-option" style="display:inline-flex;align-items:center;gap:6px;">
+            <input type="checkbox" value="B" id="classB" onchange="renderTable()">
+            <span id="classBBadgeSlot"></span> Class B
+          </label>
+        </div>
+      </div>
+
+      <div class="adv-section">
         <div class="adv-section-title">Alerts</div>
         <select class="adv-full-select"><option value="">Price change</option><option>Increase</option><option>Decrease</option><option>No change</option></select>
         <select class="adv-full-select"><option value="">Exposure</option><option>High</option><option>Medium</option><option>Low</option></select>
@@ -281,36 +316,40 @@
 
 <!-- ── Lease Term Modal ── -->
 <div class="modal-backdrop" id="leaseModal">
-  <div class="modal" style="width:520px;">
-    <div class="modal-header">
+  <div class="modal" style="width:90vw;max-width:90vw;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);">
       <div>
         <div class="modal-title">Lease term</div>
         <div class="modal-subtitle" id="leaseModalUnit"></div>
       </div>
-      <button class="modal-close" onclick="closeModal('leaseModal')">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div style="margin-bottom:14px;">
-        <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Move-in Date</label>
-        <button class="date-range-btn" id="moveInDateBtn" onclick="openCalendar('moveIn', this)" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border-mid);border-radius:var(--radius);background:var(--surface);color:var(--text-secondary);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;width:100%;justify-content:space-between;">
-          <span id="moveInDateLabel">Select move-in date</span>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="12" height="11" rx="1.5"/><line x1="1" y1="5.5" x2="13" y2="5.5"/><line x1="4" y1="1" x2="4" y2="3.5"/><line x1="10" y1="1" x2="10" y2="3.5"/></svg>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button id="ltMoveInBtn" onclick="openCalendarFor('ltMoveInBtn', onLTDateSelected, this)" style="display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--border-mid);border-radius:var(--radius);background:var(--surface);color:var(--text-secondary);font-family:'DM Sans',sans-serif;font-size:12.5px;cursor:pointer;white-space:nowrap;">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="12" height="11" rx="1.5"/><line x1="1" y1="5.5" x2="13" y2="5.5"/><line x1="4" y1="1" x2="4" y2="3.5"/><line x1="10" y1="1" x2="10" y2="3.5"/></svg>
+          <span id="ltMoveInLabel">Move-in date</span>
+        </button>
+        <button class="modal-close" onclick="closeModal('leaseModal')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
         </button>
       </div>
-      <table class="modal-table">
-        <thead>
-          <tr>
-            <th>Lease terms <span class="th-sub">In months</span></th>
-            <th>Prices <span class="th-sub">Per month</span></th>
-            <th>Concession Amt.</th>
-          </tr>
-        </thead>
-        <tbody id="leaseTableBody"></tbody>
-      </table>
     </div>
-    <div class="modal-footer">
+    <div class="modal-body" style="padding:20px 24px;overflow-y:auto;">
+      <div id="ltScrollContainer" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:8px;">
+        <div id="ltChartWrap" style="position:relative;height:300px;overflow:hidden;">
+          <canvas id="ltChart"></canvas>
+        </div>
+        <table id="ltHorizTable" style="table-layout:fixed;width:max-content;border-collapse:collapse;font-size:12.5px;border-top:1px solid var(--border);"></table>
+      </div>
+      <style>
+        #ltScrollContainer::-webkit-scrollbar { height:6px; }
+        #ltScrollContainer::-webkit-scrollbar-track { background:var(--border); border-radius:3px; }
+        #ltScrollContainer::-webkit-scrollbar-thumb { background:var(--accent); border-radius:3px; }
+      </style>
+    </div>
+    <div class="modal-footer" style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Hold Settings:</span>
+        <div id="ltHoldInline" style="display:flex;align-items:center;gap:12px;"></div>
+      </div>
       <button class="btn btn-ghost" onclick="closeModal('leaseModal')">Exit</button>
     </div>
   </div>
@@ -318,7 +357,7 @@
 
 <!-- ── Attributes Modal ── -->
 <div class="modal-backdrop" id="attrModal">
-  <div class="modal" style="width:420px;">
+  <div class="modal" style="width:440px;">
     <div class="modal-header">
       <div>
         <div class="modal-title">Attributes</div>
@@ -329,9 +368,21 @@
       </button>
     </div>
     <div class="modal-body">
-      <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
-        <span style="font-size:13px;color:var(--text-secondary);">Area</span>
-        <span style="font-size:13px;font-weight:500;">950 sq ft</span>
+      <div style="display:flex;gap:16px;padding:12px 14px;background:var(--body-bg);border-radius:8px;border:1px solid var(--border);margin-bottom:14px;">
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Floorplan</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text-primary);" id="attrFloorplan">1BR/1BA</div>
+        </div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Area</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text-primary);" id="attrArea">750 sq ft</div>
+        </div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Floor</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text-primary);" id="attrFloor">3</div>
+        </div>
       </div>
       <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Apartment attributes</div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
@@ -347,6 +398,12 @@
         <span style="font-size:13px;color:var(--text-secondary);">Parking garage</span>
         <span style="font-size:13px;color:var(--text-secondary);">Co-working lounge</span>
       </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+        <a href="javascript:void(0)" id="attrCommLink" style="color:var(--accent);font-size:13px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+          View Community Attributes
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="7" x2="12" y2="7"/><polyline points="8,3 12,7 8,11"/></svg>
+        </a>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('attrModal')">Exit</button>
@@ -354,9 +411,32 @@
   </div>
 </div>
 
+<!-- ── Community Attributes Modal ── -->
+<div class="modal-backdrop" id="commAttrModal">
+  <div class="modal" style="width:520px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Community Attributes</div>
+        <div class="modal-subtitle" id="commAttrName"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('commAttrModal')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="commAttrFacts" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;"></div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Amenities</div>
+      <div id="commAttrAmenities" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('commAttrModal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Concession Info Modal ── -->
 <div class="modal-backdrop" id="concInfoModal">
-  <div class="modal" style="width:600px;max-height:80vh;">
+  <div class="modal" style="width:min(95vw,860px);max-width:min(95vw,860px);max-height:85vh;">
     <div class="modal-header"><div><div class="modal-title">Active Concessions</div><div class="modal-subtitle" id="concInfoSubtitle"></div></div><button class="modal-close" onclick="closeModal('concInfoModal')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg></button></div>
     <div class="modal-body" style="overflow-y:auto;">
       <div id="concInfoEmpty" style="display:none;padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">No active concessions</div>
@@ -438,6 +518,17 @@
       </button>
     </div>
     <div class="modal-body">
+      <div style="display:flex;gap:16px;padding:10px 14px;background:var(--body-bg);border-radius:8px;border:1px solid var(--border);margin-bottom:14px;">
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Floorplan</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text-primary);" id="attFloorplan">1BR/1BA</div>
+        </div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Area</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text-primary);" id="attArea">750 sq ft</div>
+        </div>
+      </div>
       <table class="modal-table">
         <thead>
           <tr>
@@ -509,6 +600,36 @@ function getSelectedRcFilters() {
   return [...cbs].map(c => c.value);
 }
 
+// ── Anchor Prices ─────────────────────────────────────────
+function findUnit(unitId) {
+  for (const c of PRICING_DATA) {
+    for (const bt of c.bedTypes) {
+      const u = bt.units?.find(u => u.id === unitId);
+      if (u) return u;
+    }
+  }
+  return null;
+}
+
+function editAnchorPrice(unitId, el) {
+  const targetUnit = findUnit(unitId);
+  if (!targetUnit) return;
+  const current = targetUnit.anchorPrice ?? '';
+  const td = el.closest('td');
+  td.innerHTML = `<input type="text" value="${current}" onkeydown="if(event.key==='Enter'){saveAnchorFromInput('${unitId}',this);}" onblur="saveAnchorFromInput('${unitId}',this)" style="width:72px;border:none;border-bottom:1px solid var(--accent);background:transparent;font-family:'DM Sans',sans-serif;font-size:12.5px;padding:2px 0;outline:none;text-align:right;" autofocus>`;
+  const inp = td.querySelector('input');
+  inp.focus();
+  inp.select();
+}
+
+function saveAnchorFromInput(unitId, input) {
+  const num = parseFloat(input.value.replace(/[^0-9.]/g, ''));
+  const u = findUnit(unitId);
+  if (u) u.anchorPrice = isNaN(num) ? null : num;
+  if (typeof renderTableInPlace === 'function') renderTableInPlace();
+  else renderTable();
+}
+
 // ── Price Override System ────────────────────────────────
 const priceOverrides = {};
 
@@ -526,8 +647,20 @@ function computeDelta(newRecRent, priorPeriodPrice) {
   return ((newRecRent - priorPeriodPrice) / priorPeriodPrice * 100).toFixed(1);
 }
 
-function computeNetEff(newRecRent, concsAmt) {
-  return newRecRent - (concsAmt ?? 0);
+function computeNetEff(newRecRent, unitOrConcsAmt) {
+  // Backwards compat: if a number is passed, treat as raw concsAmt subtraction
+  if (typeof unitOrConcsAmt === 'number' || unitOrConcsAmt == null) {
+    return newRecRent - (unitOrConcsAmt ?? 0);
+  }
+  const unit = unitOrConcsAmt;
+  const concUnit = (typeof CONCESSIONS_DATA !== 'undefined' ? CONCESSIONS_DATA : [])
+    ?.find(c => c.id === unit.commId)
+    ?.bedTypes.find(b => b.type === unit.bedType)
+    ?.units.find(u => u.id === unit.id);
+  const monthlyConcs = (concUnit?.allApplicableConcessions ?? [])
+    .filter(c => c.status === 'Active' && c.monthly);
+  const totalMonthly = monthlyConcs.reduce((s, c) => s + c.displayAmount, 0);
+  return Math.max(0, newRecRent - totalMonthly);
 }
 
 function onPriceChange(rowKey, type, rawValue, rowLevel, parentKeys) {
@@ -893,13 +1026,11 @@ function clearAvailRange() {
 // ── Input Formatting ──────────────────────────────────────
 function handleAbsInput(input, rowKey, rowLevel, parentKeys) {
   let raw = input.value.replace(/[^0-9.\-]/g, '');
-  input.value = raw;
   onPriceChange(rowKey, 'abs', raw, rowLevel, parentKeys);
 }
 
 function handlePctInput(input, rowKey, rowLevel, parentKeys) {
   let raw = input.value.replace(/[^0-9.\-]/g, '');
-  input.value = raw;
   onPriceChange(rowKey, 'pct', raw, rowLevel, parentKeys);
 }
 
@@ -910,6 +1041,79 @@ function applyDollarFormat(input) {
 function applyPctFormat(input) {
   const val = parseFloat(input.value.replace(/[^0-9.\-]/g, ''));
   input.value = isNaN(val) ? '' : val + '%';
+}
+
+// ── Stats Bar ─────────────────────────────────────────────
+function renderStatsBar(filteredData) {
+  const allUnits = filteredData.flatMap(c => c.bedTypes.flatMap(bt => bt.units));
+  const availUnits = allUnits.filter(u => u.status === 'vacant' || u.status === 'on notice');
+
+  const avgVacantExp = filteredData.length > 0
+    ? (filteredData.reduce((s,c) => s + parseFloat(c.availPct), 0) / filteredData.length).toFixed(1)
+    : '0';
+  const avgExp30 = (parseFloat(avgVacantExp) * 1.4).toFixed(1);
+  const avgExp60 = (parseFloat(avgVacantExp) * 2.1).toFixed(1);
+
+  const concData = typeof CONCESSIONS_DATA !== 'undefined' ? CONCESSIONS_DATA : [];
+  const concUnitIds = new Set(
+    concData.flatMap(c => c.allUnits ?? []).filter(u => u.hasConcession).map(u => u.id)
+  );
+  const concssedCount = availUnits.filter(u => concUnitIds.has(u.id)).length;
+  const concssedPct = availUnits.length > 0
+    ? (concssedCount / availUnits.length * 100).toFixed(1)
+    : '0';
+
+  const concUnits = concData.flatMap(c => c.allUnits ?? []).filter(u => u.hasConcession && u.concPctOfRent > 0);
+  const avgConcPct = concUnits.length > 0
+    ? (concUnits.reduce((s,u) => s + u.concPctOfRent, 0) / concUnits.length).toFixed(1)
+    : '0';
+
+  const overrideCount = Object.keys(priceOverrides).filter(k =>
+    priceOverrides[k].absChange != null || priceOverrides[k].pctChange != null
+  ).length;
+  const overridePct = availUnits.length > 0
+    ? (overrideCount / availUnits.length * 100).toFixed(1)
+    : '0';
+
+  const avgRecRent = availUnits.length > 0
+    ? availUnits.reduce((s,u) => s + (u.recRent ?? 0), 0) / availUnits.length
+    : 0;
+  const avgPriorRent = availUnits.length > 0
+    ? availUnits.reduce((s,u) => s + (u.priorRent ?? 0), 0) / availUnits.length
+    : 0;
+  const yoyChange = avgPriorRent > 0
+    ? ((avgRecRent - avgPriorRent) / avgPriorRent * 100).toFixed(1)
+    : '0';
+
+  const stats = [
+    { label: 'Vacant Exp.', value: avgVacantExp + '%', color: 'var(--text-primary)' },
+    { label: '30-Day Exp.', value: avgExp30 + '%', color: 'var(--text-primary)' },
+    { label: '60-Day Exp.', value: avgExp60 + '%', color: 'var(--text-primary)' },
+    { label: 'Concessed Units', value: concssedPct + '%', color: parseFloat(concssedPct) > 30 ? '#f5a623' : 'var(--text-primary)' },
+    { label: 'Avg. Conc.', value: avgConcPct + '% of rent', color: 'var(--text-primary)' },
+    { label: 'Price Overrides', value: overridePct + '%', color: parseFloat(overridePct) > 0 ? 'var(--accent)' : 'var(--text-muted)' },
+    { label: 'YoY Net Eff.', value: (parseFloat(yoyChange) > 0 ? '+' : '') + yoyChange + '%', color: parseFloat(yoyChange) >= 0 ? '#15803d' : '#e05252' },
+  ];
+
+  const el = document.getElementById('pricingStatsBar');
+  if (!el) return;
+  el.innerHTML = stats.map((s, i) => `
+    ${i > 0 ? '<div style="width:1px;height:24px;background:var(--border);flex-shrink:0;"></div>' : ''}
+    <div style="display:flex;flex-direction:column;align-items:center;padding:0 12px;flex-shrink:0;">
+      <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;margin-bottom:1px;">${s.label}</div>
+      <div style="font-size:13px;font-weight:700;color:${s.color};white-space:nowrap;">${s.value}</div>
+    </div>
+  `).join('');
+}
+
+// ── Class Badge ───────────────────────────────────────────
+function classBadge(cls) {
+  const config = {
+    A: { bg: 'rgba(245,158,11,0.12)', color: '#92400e', border: 'rgba(245,158,11,0.3)' },
+    B: { bg: 'rgba(100,116,139,0.1)', color: '#475569', border: 'rgba(100,116,139,0.25)' },
+  };
+  const c = config[cls] ?? config.B;
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;font-size:10px;font-weight:800;background:${c.bg};color:${c.color};border:1px solid ${c.border};flex-shrink:0;">${cls}</span>`;
 }
 
 // ── Table Rendering ───────────────────────────────────────
@@ -946,12 +1150,15 @@ function renderTable() {
   const cdF = getMsValues('cd');
   const unitIdQuery = document.getElementById('unitIdSearch')?.value.trim().toLowerCase() ?? '';
 
+  const classFilter = ['A','B'].filter(cl => document.getElementById('class'+cl)?.checked);
+
   let data = PRICING_DATA.filter(c => {
     if (stateF.length && !stateF.includes(c.state)) return false;
     if (metroF.length && !metroF.includes(c.metro)) return false;
     if (commF.length && !commF.includes(c.name)) return false;
     if (rmF.length && !rmF.includes(c.rm)) return false;
     if (cdF.length && !cdF.includes(c.cd)) return false;
+    if (classFilter.length && !classFilter.includes(c.class)) return false;
     return true;
   });
 
@@ -984,7 +1191,11 @@ function renderTable() {
         <button class="expand-btn ${propOpen ? 'open' : ''}" onclick="toggleProp('${prop.id}')">
           <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,2 8,6 4,10"/></svg>
         </button>
-        <strong>${prop.name}</strong>
+        ${classBadge(prop.class)}
+        <strong style="margin-left:6px;">${prop.name}</strong>
+        <button onclick="openCommAttrModal('${prop.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);display:inline-flex;align-items:center;padding:0 4px;vertical-align:middle;" title="View community attributes">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><line x1="7" y1="6" x2="7" y2="10"/><circle cx="7" cy="4.5" r=".6" fill="currentColor"/></svg>
+        </button>
         <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${Math.round(prop.totalUnits * prop.availPct / 100)}/${prop.totalUnits}</span>
       </td>
       <td>
@@ -994,9 +1205,9 @@ function renderTable() {
       </td>
       <td style="text-align:center"></td><td></td><td></td><td></td>
       <td>${alertBell(prop.alerts)}</td>
-      <td></td><td></td><td></td><td></td>
-      <td class="price-change-abs" style="padding-left:8px;padding-right:4px;"><input class="price-input" type="text" value="${priceOverrides[prop.id]?.absChange!=null?priceOverrides[prop.id].absChange:''}" placeholder="$" oninput="handleAbsInput(this,'${prop.id}','property',{})" onblur="applyDollarFormat(this)"></td>
-      <td class="price-change-pct" style="padding-left:4px;padding-right:8px;"><input class="price-input" type="text" value="${priceOverrides[prop.id]?.pctChange!=null?priceOverrides[prop.id].pctChange:''}" placeholder="%" oninput="handlePctInput(this,'${prop.id}','property',{})" onblur="applyPctFormat(this)"></td>
+      <td></td><td></td><td></td><td></td><td></td>
+      <td class="price-change-abs" style="padding-left:8px;padding-right:4px;"><input class="price-input" type="text" value="${priceOverrides[prop.id]?.absChange!=null?priceOverrides[prop.id].absChange:''}" placeholder="$" oninput="this.value=this.value.replace(/[^0-9.-]/g,'')" onkeydown="if(event.key==='Enter'){applyDollarFormat(this);handleAbsInput(this,'${prop.id}','property',{});this.blur();}" onblur="applyDollarFormat(this)"></td>
+      <td class="price-change-pct" style="padding-left:4px;padding-right:8px;"><input class="price-input" type="text" value="${priceOverrides[prop.id]?.pctChange!=null?priceOverrides[prop.id].pctChange:''}" placeholder="%" oninput="this.value=this.value.replace(/[^0-9.-]/g,'')" onkeydown="if(event.key==='Enter'){applyPctFormat(this);handlePctInput(this,'${prop.id}','property',{});this.blur();}" onblur="applyPctFormat(this)"></td>
       <td></td><td></td><td></td>
       <td>${(()=>{const cc=typeof CONCESSIONS_DATA!=='undefined'?CONCESSIONS_DATA.find(c=>c.id===prop.id):null;const ac=(cc?.commConcessions?.filter(c=>c.status==='Active').length??0)+(cc?.bedTypes?.reduce((s,bt)=>s+bt.btConcessions.filter(c=>c.status==='Active').length,0)??0);return ac>0?`<button onclick="openConcInfoModal('community','${prop.id}',null,null)" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:12px;font-weight:500;text-decoration:underline;text-underline-offset:2px;padding:0;">${ac} active</button>`:'<span style="color:var(--text-muted);font-size:12px;">\u2014</span>';})()}</td>
       <td></td>
@@ -1024,11 +1235,12 @@ function renderTable() {
         <td style="text-align:center"></td><td></td><td></td><td></td>
         <td>${alertBell(bt.alerts)}</td>
         <td></td>
+        <td style="text-align:right;color:var(--text-secondary);font-size:12px;">${(()=>{const arr=(bt.units??[]).map(u=>u.anchorPrice).filter(p=>p!=null);return arr.length>0?'$'+Math.round(arr.reduce((s,p)=>s+p,0)/arr.length).toLocaleString():'\u2014';})()}</td>
         <td>${fmt(bt.priorPeriodPrice)}</td>
         <td>${fmt(computeRecRent(bt.recRent, btKey))}</td>
         <td>${fmtPct(computeDelta(computeRecRent(bt.recRent, btKey), bt.priorPeriodPrice))}</td>
-        <td class="price-change-abs" style="padding-left:8px;padding-right:4px;"><input class="price-input" type="text" value="${priceOverrides[btKey]?.absChange!=null?priceOverrides[btKey].absChange:''}" placeholder="$" oninput="handleAbsInput(this,'${btKey}','bedtype',{propId:'${prop.id}'})" onblur="applyDollarFormat(this)"></td>
-        <td class="price-change-pct" style="padding-left:4px;padding-right:8px;"><input class="price-input" type="text" value="${priceOverrides[btKey]?.pctChange!=null?priceOverrides[btKey].pctChange:''}" placeholder="%" oninput="handlePctInput(this,'${btKey}','bedtype',{propId:'${prop.id}'})" onblur="applyPctFormat(this)"></td>
+        <td class="price-change-abs" style="padding-left:8px;padding-right:4px;"><input class="price-input" type="text" value="${priceOverrides[btKey]?.absChange!=null?priceOverrides[btKey].absChange:''}" placeholder="$" oninput="this.value=this.value.replace(/[^0-9.-]/g,'')" onkeydown="if(event.key==='Enter'){applyDollarFormat(this);handleAbsInput(this,'${btKey}','bedtype',{propId:'${prop.id}'});this.blur();}" onblur="applyDollarFormat(this)"></td>
+        <td class="price-change-pct" style="padding-left:4px;padding-right:8px;"><input class="price-input" type="text" value="${priceOverrides[btKey]?.pctChange!=null?priceOverrides[btKey].pctChange:''}" placeholder="%" oninput="this.value=this.value.replace(/[^0-9.-]/g,'')" onkeydown="if(event.key==='Enter'){applyPctFormat(this);handlePctInput(this,'${btKey}','bedtype',{propId:'${prop.id}'});this.blur();}" onblur="applyPctFormat(this)"></td>
         <td></td><td></td><td>${fmt(computeNetEff(computeRecRent(bt.recRent, btKey), bt.concsAmt))}</td>
         <td>
           ${(()=>{const cc=typeof CONCESSIONS_DATA!=='undefined'?CONCESSIONS_DATA.find(c=>c.id===prop.id):null;const abc=[...(cc?.commConcessions??[]),...(cc?.bedTypes.find(b=>b.type===bt.type)?.btConcessions??[])].filter(c=>c.status==='Active');return abc.length>0?`<button onclick="openConcInfoModal('bedtype','${prop.id}','${bt.type}',null)" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:12px;font-weight:500;text-decoration:underline;text-underline-offset:2px;padding:0;">${abc.length} active</button>`:'<span style="color:var(--text-muted);font-size:12px;">\u2014</span>';})()}
@@ -1046,6 +1258,7 @@ function renderTable() {
       });
 
       const rcFilter = getSelectedRcFilters();
+      const floorplanF = document.getElementById('floorplanFilter')?.value;
       const filteredUnits = sorted.filter(unit => {
         if (unitIdQuery && !unit.id.toLowerCase().includes(unitIdQuery)) return false;
         if (availRangeStart && availRangeEnd && unit.availDate) {
@@ -1054,6 +1267,7 @@ function renderTable() {
           if (ud < availRangeStart || ud > availRangeEnd) return false;
         }
         if (rcFilter.length > 0 && !rcFilter.includes(unit.rcStatus ?? 'null')) return false;
+        if (floorplanF && unit.floorplan !== floorplanF) return false;
         return true;
       });
 
@@ -1063,14 +1277,17 @@ function renderTable() {
         const statusCfg = { vacant: { label: 'VC', bg: '#f87171', color: '#fff' }, 'on notice': { label: 'ON', bg: '#94a3b8', color: '#fff' } };
         const sCfg = statusCfg[unit.status] || statusCfg.vacant;
         const statusBadge = `<span style="display:inline-flex;align-items:center;justify-content:center;background:${sCfg.bg};color:${sCfg.color};font-size:9px;font-weight:700;letter-spacing:.03em;border-radius:3px;padding:1px 4px;min-width:20px;">${sCfg.label}</span>`;
+        const rcLink = unit.rcStatus && ['RC','AF','HA'].includes(unit.rcStatus)
+          ? `<a href="rent-control.html?tab=management&commId=${prop.id}&bedType=${encodeURIComponent(bt.type)}&unitId=${encodeURIComponent(unit.id)}" title="Configure rent control for this unit" style="display:inline-flex;align-items:center;margin-left:4px;color:var(--text-muted);text-decoration:none;vertical-align:middle;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8"/><polyline points="9,1 13,1 13,5"/><line x1="7" y1="7" x2="13" y2="1"/></svg></a>`
+          : '';
         const rcBadge = unit.rcStatus && rcConfig[unit.rcStatus]
-          ? `<span style="display:inline-flex;align-items:center;justify-content:center;background:${rcConfig[unit.rcStatus].bg};color:${rcConfig[unit.rcStatus].color};font-size:9px;font-weight:700;letter-spacing:.03em;border-radius:3px;padding:1px 4px;min-width:20px;">${unit.rcStatus}</span>`
+          ? `<span style="display:inline-flex;align-items:center;justify-content:center;background:${rcConfig[unit.rcStatus].bg};color:${rcConfig[unit.rcStatus].color};font-size:9px;font-weight:700;letter-spacing:.03em;border-radius:3px;padding:1px 4px;min-width:20px;">${unit.rcStatus}</span>${rcLink}`
           : '';
         const ov = priceOverrides[unit.id];
         const hasOverride = ov && (ov.absChange != null || ov.pctChange != null);
         const effRec = computeRecRent(unit.recRent, unit.id);
         const effDelta = hasOverride ? computeDelta(effRec, unit.priorPeriodPrice) : unit.deltaPrior;
-        const effNetEff = computeNetEff(effRec, unit.concsAmt);
+        const effNetEff = computeNetEff(effRec, {commId: prop.id, bedType: bt.type, id: unit.id});
         const isInherited = ov?.inherited === true;
         const deltaClass = hasOverride ? (parseFloat(effDelta) >= 0 ? 'delta-pos' : 'delta-neg') : '';
         const recRentCell = unit.recRent
@@ -1090,13 +1307,16 @@ function renderTable() {
           <td>${unit.moveOut}</td>
           <td>${unit.availDate}</td>
           <td>${alertBell(unit.alerts)}</td>
-          <td>${unit.priorRent ? '$' + unit.priorRent.toLocaleString() + ' <span style="font-size:10.5px;color:var(--text-muted)">(16 mo.)</span>' : ''}</td>
+          <td>
+            ${unit.priorRent ? `<span style="display:inline-flex;align-items:center;gap:4px;">$${unit.priorRent.toLocaleString()}${unit.hasPriorConcession ? `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="1.5" style="cursor:help;flex-shrink:0;"><title>Gross rent: $${unit.grossRent?.toLocaleString()} — concession applied</title><circle cx="7" cy="7" r="5"/><line x1="7" y1="6" x2="7" y2="10"/><circle cx="7" cy="4.5" r=".6" fill="var(--accent)"/></svg>` : ''}</span>` : ''}
+          </td>
+          <td style="text-align:right;"><span style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;border-bottom:1px dashed var(--border-mid);padding-bottom:1px;" onclick="editAnchorPrice('${unit.id}', this)" title="Click to edit">$${unit.anchorPrice.toLocaleString()}<svg width="9" height="9" viewBox="0 0 14 14" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><path d="M9 2l3 3-7 7H2v-3L9 2z"/></svg></span></td>
           <td>${fmt(unit.priorPeriodPrice)}</td>
           <td>${recRentCell}</td>
           <td class="${deltaClass}">${hasOverride ? (parseFloat(effDelta)>0?'+':'') + effDelta + '%' : fmtPct(unit.deltaPrior)}</td>
-          <td class="price-change-abs" style="padding-left:8px;padding-right:4px;"><input class="price-input" type="text" value="${ov?.absChange!=null?ov.absChange:''}" placeholder="$" oninput="handleAbsInput(this,'${unit.id}','unit',{})" onblur="applyDollarFormat(this)"></td>
-          <td class="price-change-pct" style="padding-left:4px;padding-right:8px;"><input class="price-input" type="text" value="${ov?.pctChange!=null?ov.pctChange:''}" placeholder="%" oninput="handlePctInput(this,'${unit.id}','unit',{})" onblur="applyPctFormat(this)"></td>
-          <td class="highlight-teal">${unit.lt ? `<a href="javascript:void(0)" onclick="openLeaseModal('${unit.id}',${unit.recRent},${unit.lt})" style="color:var(--accent);text-decoration:underline;cursor:pointer;">${unit.lt}</a>` : ''}</td>
+          <td class="price-change-abs" style="padding-left:8px;padding-right:4px;"><input class="price-input" type="text" value="${ov?.absChange!=null?ov.absChange:''}" placeholder="$" oninput="this.value=this.value.replace(/[^0-9.-]/g,'')" onkeydown="if(event.key==='Enter'){applyDollarFormat(this);handleAbsInput(this,'${unit.id}','unit',{});this.blur();}" onblur="applyDollarFormat(this)"></td>
+          <td class="price-change-pct" style="padding-left:4px;padding-right:8px;"><input class="price-input" type="text" value="${ov?.pctChange!=null?ov.pctChange:''}" placeholder="%" oninput="this.value=this.value.replace(/[^0-9.-]/g,'')" onkeydown="if(event.key==='Enter'){applyPctFormat(this);handlePctInput(this,'${unit.id}','unit',{});this.blur();}" onblur="applyPctFormat(this)"></td>
+          <td class="highlight-teal">${unit.lt ? `<a href="javascript:void(0)" onclick="openLeaseModal('${unit.id}')" style="color:var(--accent);text-decoration:underline;cursor:pointer;">${unit.lt}</a>` : ''}</td>
           <td class="highlight-teal">${unit.attValue ? `<a href="javascript:void(0)" onclick="openAttValueModal('${unit.id}', ${unit.attValue})" style="color:var(--accent);text-decoration:underline;cursor:pointer;">$${unit.attValue}</a>` : ''}</td>
           <td>${fmt(effNetEff)}</td>
           <td>
@@ -1108,6 +1328,8 @@ function renderTable() {
       });
     });
   });
+
+  renderStatsBar(data);
 }
 
 function toggleProp(id) {
@@ -1121,14 +1343,20 @@ function toggleBedType(key) {
   renderTable();
 }
 
+let currentExposureBaseRent = 1800;
+let chartMode = 'daily'; // 'daily' | 'monthly'
+
 function toggleExposureForProp(key, label, baseRent) {
   if (exposureOpen && !document.getElementById('exposurePanel').classList.contains('panel-closed') && exposurePropId === key) {
     toggleExposure();
     exposurePropId = null;
     return;
   }
+  // Auto-close unit pricing panel to avoid stacking
+  if (unitPricingOpen) toggleUnitPricing();
   document.getElementById('exposurePropName').textContent = label;
   exposurePropId = key;
+  currentExposureBaseRent = baseRent;
   if (!exposureOpen) toggleExposure();
   else {
     document.getElementById('exposurePanel').classList.remove('panel-closed');
@@ -1136,6 +1364,23 @@ function toggleExposureForProp(key, label, baseRent) {
   }
   renderCharts(baseRent);
   updatePanelState();
+}
+
+function setChartMode(mode) {
+  chartMode = mode;
+  const dBtn = document.getElementById('toggleDaily');
+  const mBtn = document.getElementById('toggleMonthly');
+  if (dBtn) {
+    dBtn.style.background = mode === 'daily' ? 'rgba(255,255,255,0.15)' : 'none';
+    dBtn.style.color = mode === 'daily' ? '#fff' : '#6b7280';
+    dBtn.style.fontWeight = mode === 'daily' ? '600' : '400';
+  }
+  if (mBtn) {
+    mBtn.style.background = mode === 'monthly' ? 'rgba(255,255,255,0.15)' : 'none';
+    mBtn.style.color = mode === 'monthly' ? '#fff' : '#6b7280';
+    mBtn.style.fontWeight = mode === 'monthly' ? '600' : '400';
+  }
+  renderCharts(currentExposureBaseRent);
 }
 
 // ── Exposure Panel ────────────────────────────────────────
@@ -1157,9 +1402,38 @@ function toggleExposure() {
 }
 
 function renderCharts(baseRent) {
-  const expData = makeExposureData();
-  const pricingData = makePricingData(baseRent);
-  const labels = CHART_MONTHS;
+  // Build labels + data based on chartMode
+  let labels, n;
+  if (chartMode === 'daily') {
+    labels = [];
+    for (let i = 89; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    }
+    n = 90;
+  } else {
+    labels = CHART_MONTHS;
+    n = 12;
+  }
+
+  // Generate exposure series for n points
+  const expData = Array.from({ length: n }, () => ({
+    vacant: +(Math.random() * 2.5 + 1.0).toFixed(2),
+    exp30:  +(Math.random() * 2.5 + 1.5).toFixed(2),
+    exp60:  +(Math.random() * 3.0 + 2.0).toFixed(2),
+  }));
+
+  // Generate competitor pricing series for n points
+  const pricingSeries = Array.from({ length: n }, () => {
+    const compMedian = baseRent + 60 + Math.floor(Math.random() * 80 - 40);
+    return {
+      windsorMedian: baseRent + Math.floor(Math.random() * 60 - 30),
+      compMedian,
+      compFloor: compMedian - 150 + Math.floor(Math.random() * 40 - 20),
+      compCeiling: compMedian + 180 + Math.floor(Math.random() * 40 - 20),
+    };
+  });
 
   const darkTooltip = {
     mode: 'index',
@@ -1170,6 +1444,9 @@ function renderCharts(baseRent) {
     titleColor: '#e5e7eb',
     bodyColor: '#9ca3af',
     padding: 10,
+    titleFont: { family: 'DM Sans', size: 12, weight: '600' },
+    bodyFont: { family: 'DM Sans', size: 11 },
+    footerFont: { family: 'DM Sans', size: 11 },
     callbacks: {
       label: function(ctx) {
         const isExposure = ctx.chart.canvas.id === 'exposureChart';
@@ -1180,15 +1457,28 @@ function renderCharts(baseRent) {
     }
   };
 
+  const xTickOpts = {
+    color: '#9ca3af',
+    font: { family: 'DM Sans', size: 9 },
+    maxRotation: 0,
+    maxTicksLimit: 12,
+    autoSkip: true,
+  };
+  const yTickOpts = {
+    color: '#9ca3af',
+    font: { family: 'DM Sans', size: 9 },
+  };
+  const gridColor = 'rgba(255,255,255,0.06)';
+
   if (exposureChartInst) exposureChartInst.destroy();
   exposureChartInst = new Chart(document.getElementById('exposureChart'), {
     type: 'line',
     data: {
       labels,
       datasets: [
-        { label: '60 Day',  data: expData.map(d => d.exp60),          borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.3)',  fill: true, stack: 'exp', tension: .4, pointRadius: 0 },
-        { label: '30 Day',  data: expData.map(d => d.exp30),          borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.35)',  fill: true, stack: 'exp', tension: .4, pointRadius: 0 },
-        { label: 'Vacant',  data: expData.map(d => d.vacantExposure), borderColor: '#f5a623', backgroundColor: 'rgba(245,166,35,0.5)',   fill: true, stack: 'exp', tension: .4, pointRadius: 0 },
+        { label: '60 Day', data: expData.map(d => d.exp60),    borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.3)',  fill: true, stack: 'exp', tension: .4, pointRadius: 0 },
+        { label: '30 Day', data: expData.map(d => d.exp30),    borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.35)',  fill: true, stack: 'exp', tension: .4, pointRadius: 0 },
+        { label: 'Vacant', data: expData.map(d => d.vacant),   borderColor: '#f5a623', backgroundColor: 'rgba(245,166,35,0.5)',   fill: true, stack: 'exp', tension: .4, pointRadius: 0 },
       ],
     },
     options: {
@@ -1197,8 +1487,8 @@ function renderCharts(baseRent) {
       animation: false,
       plugins: { tooltip: darkTooltip, legend: { display: false } },
       scales: {
-        x: { display: true, stacked: true, ticks: { color: '#6b7280', font: { size: 9 }, maxRotation: 0, maxTicksLimit: 12 }, grid: { color: '#2a2d35' } },
-        y: { display: true, stacked: true, min: 0, ticks: { color: '#6b7280', font: { size: 9 }, callback: v => v + '%' }, grid: { color: '#2a2d35' } },
+        x: { display: true, stacked: true, ticks: xTickOpts, grid: { color: gridColor } },
+        y: { display: true, stacked: true, min: 0, ticks: { ...yTickOpts, callback: v => v + '%' }, grid: { color: gridColor } },
       },
     },
   });
@@ -1209,20 +1499,57 @@ function renderCharts(baseRent) {
     data: {
       labels,
       datasets: [
-        { label: 'Comp Floor',        data: pricingData.map(d => d.compFloor),     borderColor: '#475569', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false, tension: .4 },
-        { label: 'Comp Ceiling',      data: pricingData.map(d => d.compCeiling),   borderColor: '#475569', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false, tension: .4 },
-        { label: 'Competitor Median', data: pricingData.map(d => d.compMedian),    borderColor: '#f472b6', borderWidth: 2,   pointRadius: 0, fill: false, tension: .4 },
-        { label: 'Windsor Median',    data: pricingData.map(d => d.windsorMedian), borderColor: '#e8007d', borderWidth: 2.5, pointRadius: 0, fill: false, tension: .4 },
+        // Order matters for fill: floor → median → ceiling so '+1'/'-1' shade between them
+        {
+          label: 'Comp Floor',
+          data: pricingSeries.map(d => d.compFloor),
+          borderColor: 'rgba(232,0,125,0.3)',
+          borderWidth: 1,
+          borderDash: [4,3],
+          pointRadius: 0,
+          tension: .4,
+          fill: '+1',
+          backgroundColor: 'rgba(232,0,125,0.05)',
+        },
+        {
+          label: 'Windsor Median',
+          data: pricingSeries.map(d => d.windsorMedian),
+          borderColor: '#e8007d',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: .4,
+          fill: false,
+        },
+        {
+          label: 'Comp Ceiling',
+          data: pricingSeries.map(d => d.compCeiling),
+          borderColor: 'rgba(232,0,125,0.3)',
+          borderWidth: 1,
+          borderDash: [4,3],
+          pointRadius: 0,
+          tension: .4,
+          fill: '-1',
+          backgroundColor: 'rgba(232,0,125,0.05)',
+        },
+        {
+          label: 'Competitor Median',
+          data: pricingSeries.map(d => d.compMedian),
+          borderColor: '#f472b6',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: .4,
+          fill: false,
+        },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
-      plugins: { tooltip: darkTooltip, legend: { display: false } },
+      plugins: { tooltip: darkTooltip, legend: { display: false }, filler: { propagate: true } },
       scales: {
-        x: { display: true, ticks: { color: '#6b7280', font: { size: 9 }, maxRotation: 0, maxTicksLimit: 12 }, grid: { color: '#2a2d35' } },
-        y: { display: true, ticks: { color: '#6b7280', font: { size: 9 }, callback: v => '$' + v.toLocaleString() }, grid: { color: '#2a2d35' } },
+        x: { display: true, ticks: xTickOpts, grid: { color: gridColor } },
+        y: { display: true, ticks: { ...yTickOpts, callback: v => '$' + v.toLocaleString() }, grid: { color: gridColor } },
       },
     },
   });
@@ -1237,15 +1564,69 @@ document.querySelectorAll('.modal-backdrop').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
 
-function openLeaseModal(unitId, recRent, unitLt) {
+let selectedLTMoveInDate = null;
+let currentLTUnit = null;
+let ltConcessions = [];
+
+function openLeaseModal(unitId) {
+  // Find unit + community
+  let foundUnit = null, foundComm = null;
+  for (const prop of PRICING_DATA) {
+    for (const bt of prop.bedTypes) {
+      const u = bt.units.find(u => u.id === unitId);
+      if (u) { foundUnit = u; foundComm = prop; break; }
+    }
+    if (foundUnit) break;
+  }
+  if (!foundUnit) return;
+  currentLTUnit = { ...foundUnit, commId: foundComm.id, lt: foundUnit.lt || 12 };
+  selectedLTMoveInDate = null;
   document.getElementById('leaseModalUnit').textContent = unitId;
-  document.getElementById('moveInDateLabel').textContent = 'Select move-in date';
-  const base = recRent || 1800;
-  const lt = unitLt || 12;
-  const tb = document.getElementById('leaseTableBody');
-  const rows = [];
-  for (let i = 0; i < 24; i++) {
-    const term = i + 1;
+  document.getElementById('ltMoveInLabel').textContent = 'Select move-in date';
+
+  // Hold & Recovery — only show settings for the unit's status
+  const commParams = (typeof PARAMETERS_DATA !== 'undefined') ? PARAMETERS_DATA.find(c => c.id === foundComm.id) : null;
+  const p = commParams?.params ?? (typeof PARAM_DEFAULTS !== 'undefined' ? PARAM_DEFAULTS : {});
+  const isVacant = foundUnit.status === 'vacant';
+  const isOnNotice = foundUnit.status === 'on notice';
+  const settings = isVacant ? [
+    { label: 'Free Vacant', value: (p.freeDaysVacant ?? 0) + 'd' },
+    { label: 'Max',         value: (p.vacantMax ?? 0) + 'd' },
+    { label: 'Recovery',    value: (p.vacantRecovery ?? 0) + '%' },
+  ] : isOnNotice ? [
+    { label: 'Free On Notice', value: (p.freeDaysOnNotice ?? 0) + 'd' },
+    { label: 'Max',            value: (p.onNoticeMax ?? 0) + 'd' },
+    { label: 'Recovery',       value: (p.onNoticeRecovery ?? 0) + '%' },
+  ] : [
+    { label: 'Free Vacant', value: (p.freeDaysVacant ?? 0) + 'd' },
+    { label: 'Max',         value: (p.vacantMax ?? 0) + 'd' },
+    { label: 'Recovery',    value: (p.vacantRecovery ?? 0) + '%' },
+  ];
+  document.getElementById('ltHoldInline').innerHTML = settings.map((s, i) => `
+    ${i > 0 ? '<span style="color:var(--border-mid);">·</span>' : ''}
+    <span style="font-size:12px;color:var(--text-secondary);">${s.label}: <strong style="color:var(--text-primary);">${s.value}</strong></span>
+  `).join('');
+
+  rebuildLTModal(currentLTUnit);
+  openModal('leaseModal');
+}
+
+function onLTDateSelected(dateStr, dateObj) {
+  selectedLTMoveInDate = dateObj;
+  document.getElementById('ltMoveInLabel').textContent = dateStr;
+  rebuildLTModal(currentLTUnit);
+}
+
+function rebuildLTModal(unit) {
+  if (!unit) return;
+  const base = unit.recRent || 1800;
+  const lt = unit.lt || 12;
+  const terms = Array.from({length: 23}, (_, i) => i + 2); // 2..24
+
+  const prices = [];
+  const concessions = [];
+  const netEffs = [];
+  terms.forEach(term => {
     let premium = 0, conc = 0;
     const noise = Math.floor(Math.random() * 30) - 15;
     if (term <= 3) { premium = 350 + Math.floor(Math.random() * 50); conc = 0; }
@@ -1256,19 +1637,269 @@ function openLeaseModal(unitId, recRent, unitLt) {
     else if (term <= 18) { premium = -(20 + Math.floor(Math.random() * 30)); conc = 150 + Math.floor(Math.random() * 150); }
     else { premium = -(40 + Math.floor(Math.random() * 40)); conc = 150 + Math.floor(Math.random() * 150); }
     const price = base + premium + noise;
-    const isRec = term === lt;
-    const rowStyle = isRec ? ' style="background:rgba(232,0,125,0.06);"' : '';
-    const recLabel = isRec ? '<span style="color:var(--accent);font-size:10px;margin-left:6px;">★ Recommended</span>' : '';
-    rows.push(`<tr${rowStyle}><td>${term}${recLabel}</td><td>$${price.toLocaleString()}</td><td>$${conc.toLocaleString()}</td></tr>`);
-  }
-  tb.innerHTML = rows.join('');
-  openModal('leaseModal');
+    prices.push(Math.round(price));
+    concessions.push(conc);
+    netEffs.push(Math.round(price - conc));
+  });
+  ltConcessions = concessions;
+
+  // Recommended term = lowest net effective rent
+  const recTermIndex = netEffs.indexOf(Math.min(...netEffs));
+  const recTerm = terms[recTermIndex];
+
+  const moveIn = selectedLTMoveInDate ?? new Date();
+  const expiryLabels = terms.map(t => {
+    const exp = new Date(moveIn);
+    exp.setMonth(exp.getMonth() + t);
+    return exp.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+  });
+
+  // Layout constants — shared between chart and table
+  const labelColW = 130;
+  const dataColW = 80;
+
+  // Highlights for the recommended term column
+  const recColCellBg = 'rgba(232,0,125,0.05)';
+  const recHeadBg = 'rgba(232,0,125,0.12)';
+  const neBg = 'rgba(232,0,125,0.04)';
+  const stickyLabel = `position:sticky;left:0;background:var(--surface);z-index:2;`;
+  const recHeadStyle = `background:${recHeadBg};color:var(--accent);border-top:2px solid var(--accent);`;
+
+  // Build horizontal table
+  const thead = `
+    <thead>
+      <tr style="height:36px;">
+        <th style="${stickyLabel}width:auto;padding:8px 12px;font-size:13px;font-weight:700;color:var(--text-primary);text-align:left;border-bottom:2px solid var(--border);vertical-align:middle;">Term</th>
+        ${terms.map(t => {
+          const isRec = t === recTerm;
+          return `<th style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:13px;font-weight:700;border-bottom:2px solid var(--border);vertical-align:middle;${isRec ? recHeadStyle : 'color:var(--text-primary);'}">${t}${isRec ? '<div style="font-size:9px;color:var(--accent);font-weight:600;margin-top:1px;">★ Rec</div>' : ''}</th>`;
+        }).join('')}
+      </tr>
+      <tr style="height:36px;">
+        <th style="${stickyLabel}width:auto;padding:8px 12px;font-size:11px;color:var(--text-muted);font-weight:400;text-align:left;border-bottom:1px solid var(--border);vertical-align:middle;">Expiry Date</th>
+        ${expiryLabels.map((l, i) => `<th style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:11px;color:var(--text-muted);font-weight:400;border-bottom:1px solid var(--border);vertical-align:middle;${terms[i] === recTerm ? 'background:'+recColCellBg+';' : ''}">${l}</th>`).join('')}
+      </tr>
+    </thead>`;
+
+  const tbody = `
+    <tbody>
+      <tr style="height:36px;">
+        <td style="${stickyLabel}width:auto;padding:8px 12px;font-size:12.5px;font-weight:600;vertical-align:middle;">Price / mo</td>
+        ${prices.map((p, i) => `<td style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:12.5px;font-weight:600;vertical-align:middle;${terms[i] === recTerm ? 'background:'+recColCellBg+';' : ''}">$${p.toLocaleString()}</td>`).join('')}
+      </tr>
+      <tr style="height:36px;">
+        <td style="${stickyLabel}width:auto;padding:8px 12px;font-size:12px;color:var(--accent);font-weight:500;vertical-align:middle;">Concs. Amt</td>
+        ${concessions.map((c, i) => `<td style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:12px;color:var(--accent);vertical-align:middle;${terms[i] === recTerm ? 'background:'+recColCellBg+';' : ''}">${c > 0 ? '-$' + c : '—'}</td>`).join('')}
+      </tr>
+      <tr style="height:36px;">
+        <td style="${stickyLabel}width:auto;padding:8px 12px;font-size:13px;font-weight:700;color:var(--text-primary);border-top:2px solid var(--border);background:${neBg};vertical-align:middle;">Net Eff.</td>
+        ${netEffs.map((n, i) => `<td style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:13px;font-weight:700;color:var(--text-primary);border-top:2px solid var(--border);vertical-align:middle;background:${terms[i] === recTerm ? recColCellBg : neBg};">$${n.toLocaleString()}</td>`).join('')}
+      </tr>
+    </tbody>`;
+  const tableEl = document.getElementById('ltHorizTable');
+  tableEl.innerHTML = thead + tbody;
+
+  // Defer chart sizing until the table has actually rendered so we can
+  // measure the real label-column width and total table width.
+  if (window.ltChartInst) window.ltChartInst.destroy();
+  setTimeout(() => {
+    const table = document.getElementById('ltHorizTable');
+    const canvas = document.getElementById('ltChart');
+    const wrap = document.getElementById('ltChartWrap');
+    if (!table || !canvas || !wrap) return;
+    const labelTh = table.querySelector('th:first-child');
+    const labelW = labelTh ? labelTh.getBoundingClientRect().width : labelColW;
+    const tableScrollW = table.scrollWidth || (labelColW + dataColW * terms.length);
+
+    wrap.style.width = tableScrollW + 'px';
+    wrap.style.height = '300px';
+    canvas.width = tableScrollW;
+    canvas.height = 300;
+    canvas.style.width = tableScrollW + 'px';
+    canvas.style.height = '300px';
+
+    const termLabels = terms.map(t => String(t));
+
+    window.ltChartInst = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: termLabels,
+      datasets: [
+        {
+          label: 'Gross Rent',
+          data: prices.map((p, i) => ({ x: termLabels[i], y: p })),
+          borderColor: '#e8007d',
+          backgroundColor: '#e8007d',
+          pointBackgroundColor: '#e8007d',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.3,
+          fill: false,
+        },
+        {
+          label: 'Net Effective',
+          data: netEffs.map((n, i) => ({ x: termLabels[i], y: n })),
+          borderColor: '#60a5fa',
+          backgroundColor: '#60a5fa',
+          pointBackgroundColor: '#60a5fa',
+          borderWidth: 2,
+          borderDash: [4,3],
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.3,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      animation: false,
+      responsive: false,
+      maintainAspectRatio: false,
+      layout: {
+        padding: {
+          left: 0,
+          right: 0,
+          top: 4,
+          bottom: 0,
+        }
+      },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { family: 'DM Sans', size: 11 }, color: '#6b7280' } },
+        tooltip: {
+          backgroundColor: '#1a1d23',
+          borderColor: '#2a2d35',
+          borderWidth: 1,
+          titleColor: '#e5e7eb',
+          bodyColor: '#9ca3af',
+          padding: 10,
+          titleFont: { family: 'DM Sans', size: 12 },
+          bodyFont: { family: 'DM Sans', size: 11 },
+          callbacks: {
+            title: items => `Term ${items[0].label} months`,
+            label: ctx => {
+              const label = ctx.dataset.label;
+              const val = '$' + ctx.parsed.y.toLocaleString();
+              return ` ${label}: ${val}`;
+            },
+            afterBody: items => {
+              const i = items[0].dataIndex;
+              const conc = ltConcessions[i];
+              return conc > 0 ? [` Concession: -$${conc.toLocaleString()}`] : [];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'category',
+          labels: termLabels,
+          display: true,
+          offset: true,
+          bounds: 'data',
+          ticks: { display: false, align: 'center' },
+          grid: { display: true, color: '#e4e6eb', offset: true },
+          border: { display: false },
+        },
+        y: {
+          min: Math.min(...netEffs, ...prices) - 100,
+          max: Math.max(...netEffs, ...prices) + 80,
+          ticks: { color: '#6b7280', font: { family: 'DM Sans', size: 10 }, callback: v => '$' + v.toLocaleString() },
+          grid: { color: '#e4e6eb' },
+        }
+      }
+    }
+    });
+
+    // After chart has rendered, measure its actual plot area left
+    // (which depends on the y-axis label widths) and resize the table's
+    // sticky label column to match it exactly.
+    setTimeout(() => {
+      if (!window.ltChartInst) return;
+      const chartArea = window.ltChartInst.chartArea;
+      const actualPlotLeft = chartArea.left;
+      const labelCol = document.getElementById('ltHorizTable')?.querySelector('th:first-child');
+      if (labelCol) {
+        labelCol.style.width = actualPlotLeft + 'px';
+        labelCol.style.minWidth = actualPlotLeft + 'px';
+        document.querySelectorAll('#ltHorizTable td:first-child, #ltHorizTable th:first-child').forEach(c => {
+          c.style.width = actualPlotLeft + 'px';
+          c.style.minWidth = actualPlotLeft + 'px';
+        });
+      }
+    }, 40);
+  }, 80);
 }
 
 function openAttrModal(unitId) {
   document.getElementById('attrModalUnit').textContent = unitId;
+  // Find unit + community
+  let foundUnit = null, foundComm = null;
+  for (const prop of PRICING_DATA) {
+    for (const bt of prop.bedTypes) {
+      const u = bt.units.find(u => u.id === unitId);
+      if (u) { foundUnit = u; foundComm = prop; break; }
+    }
+    if (foundUnit) break;
+  }
+  if (foundUnit) {
+    document.getElementById('attrFloorplan').textContent = foundUnit.floorplan ?? '—';
+    document.getElementById('attrArea').textContent = (foundUnit.area ?? '—') + ' sq ft';
+    document.getElementById('attrFloor').textContent = foundUnit.floor ?? '—';
+  }
+  const link = document.getElementById('attrCommLink');
+  if (foundComm) {
+    link.onclick = () => { closeModal('attrModal'); openCommunityAttrModal(foundComm.id); };
+  }
   openModal('attrModal');
 }
+
+const AMENITY_ICONS = {
+  'Pool': '<path d="M2 10c2-3 4-3 5 0s3 3 5 0"/>',
+  'Concierge': '<circle cx="7" cy="4" r="2.5"/><path d="M2 13c0-3 2.5-5 5-5s5 2 5 5"/>',
+  'Parking Garage': '<rect x="2" y="5" width="10" height="7" rx="1"/><path d="M5 12v2M9 12v2M2 8h10"/>',
+  'Co-working Lounge': '<rect x="2" y="4" width="10" height="7" rx="1"/><line x1="5" y1="11" x2="5" y2="13"/><line x1="9" y1="11" x2="9" y2="13"/><line x1="3" y1="13" x2="11" y2="13"/>',
+  'Fitness Center': '<circle cx="4" cy="7" r="1.5"/><circle cx="10" cy="7" r="1.5"/><line x1="5.5" y1="7" x2="8.5" y2="7"/>',
+  'Pet Friendly': '<circle cx="4" cy="4" r="1.2"/><circle cx="10" cy="4" r="1.2"/><circle cx="7" cy="9" r="2.5"/>',
+  'Rooftop Deck': '<path d="M2 8l5-5 5 5"/><rect x="4" y="8" width="6" height="5"/>',
+  'EV Charging': '<path d="M8 2L5 8h4l-3 6"/><path d="M4 5h2M8 11h2"/>',
+  'Dog Park': '<path d="M4 13V8M4 8C4 5 7 3 7 3s3 2 3 5v5"/><circle cx="10" cy="5" r="1.5"/>',
+  'Package Lockers': '<rect x="2" y="4" width="10" height="8" rx="1"/><line x1="7" y1="4" x2="7" y2="12"/><circle cx="5" cy="8" r=".8" fill="currentColor"/><circle cx="9" cy="8" r=".8" fill="currentColor"/>',
+  'Business Center': '<rect x="3" y="5" width="8" height="7" rx="1"/><path d="M5 5V4a2 2 0 0 1 4 0v1"/>',
+  'Bike Storage': '<circle cx="4" cy="9" r="2.5"/><circle cx="10" cy="9" r="2.5"/><path d="M4 9l3-4 3 4"/><line x1="7" y1="5" x2="9" y2="5"/>',
+};
+
+function openCommAttrModal(commId) {
+  const comm = COMMUNITIES.find(c => c.id === commId);
+  if (!comm) return;
+  const cp = PRICING_DATA.find(p => p.id === commId);
+  document.getElementById('commAttrName').textContent = comm.name;
+  const facts = [
+    { label: 'Year Built', value: comm.yearBuilt ?? '—' },
+    { label: 'Total Units', value: cp?.totalUnits ?? '—' },
+    { label: 'Class', value: classBadge(comm.class) },
+    { label: 'State', value: comm.state },
+    { label: 'Metro', value: comm.metro },
+    { label: 'Revenue Manager', value: comm.rm },
+  ];
+  document.getElementById('commAttrFacts').innerHTML = facts.map(f => `
+    <div style="background:var(--body-bg);border-radius:6px;border:1px solid var(--border);padding:8px 10px;">
+      <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">${f.label}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${f.value}</div>
+    </div>
+  `).join('');
+  document.getElementById('commAttrAmenities').innerHTML =
+    (comm.amenities ?? []).map(a => `
+      <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(232,0,125,0.07);color:var(--accent);border:1px solid rgba(232,0,125,0.2);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:500;">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">${AMENITY_ICONS[a] ?? '<circle cx="7" cy="7" r="5"/>'}</svg>
+        ${a}
+      </span>
+    `).join('');
+  openModal('commAttrModal');
+}
+// Backwards-compat alias
+const openCommunityAttrModal = openCommAttrModal;
 
 function openConcInfoModal(scope,commId,bedType,unitId){
   if(typeof CONCESSIONS_DATA==='undefined')return;
@@ -1318,6 +1949,17 @@ function showAlerts(e, alerts) {
 // ── Att. Value Modal ─────────────────────────────────────
 function openAttValueModal(unitId, totalValue) {
   document.getElementById('attValueModalUnit').textContent = unitId;
+  // Find unit
+  let foundUnit = null;
+  for (const prop of PRICING_DATA) {
+    for (const bt of prop.bedTypes) {
+      const u = bt.units.find(u => u.id === unitId);
+      if (u) { foundUnit = u; break; }
+    }
+    if (foundUnit) break;
+  }
+  document.getElementById('attFloorplan').textContent = foundUnit?.floorplan ?? '1BR/1BA';
+  document.getElementById('attArea').textContent = (foundUnit?.area ?? 750) + ' sq ft';
   const attrs = ['Floor Premium', 'Balcony', 'Walk-in Closet', 'Traffic Proximity', 'Pool Access', 'Parking'];
   // Generate random values that sum to totalValue
   const rawVals = attrs.map(() => Math.random());
@@ -1374,10 +2016,41 @@ function toggleUnitPricing() {
   updatePanelState();
 }
 
+function makeUnitPricingHistory(baseRent) {
+  const days = 90;
+  const labels = [];
+  const grossRents = [];
+  const netEffRents = [];
+
+  let currentGross = baseRent * (0.94 + Math.random() * 0.04);
+  let currentNet = currentGross - Math.floor(Math.random() * 150);
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+    currentGross += (Math.random() - 0.48) * 8;
+    currentGross = Math.max(baseRent * 0.9, Math.min(baseRent * 1.08, currentGross));
+
+    const concessionStep = Math.random() > 0.95 ? (Math.random() - 0.5) * 50 : 0;
+    currentNet += (Math.random() - 0.48) * 6 + concessionStep;
+    currentNet = Math.max(baseRent * 0.8, Math.min(currentGross, currentNet));
+
+    grossRents.push(Math.round(currentGross));
+    netEffRents.push(Math.round(currentNet));
+  }
+
+  return { labels, grossRents, netEffRents };
+}
+
 function openUnitPricingPanel(el) {
   const unitId = el.dataset.id;
   const priorRent = +el.dataset.prior;
   const recRent = +el.dataset.rec;
+
+  // Auto-close exposure panel to avoid stacking
+  if (exposureOpen) toggleExposure();
 
   document.getElementById('unitPricingUnitId').textContent = unitId;
 
@@ -1389,28 +2062,16 @@ function openUnitPricingPanel(el) {
   unitPricingOpen = true;
   updatePanelState();
 
-  const today = new Date();
-  const labels = [];
-  const grossData = [];
-  const netData = [];
-  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const numPoints = 75;
+  const baseRent = recRent || priorRent || 1800;
+  const { labels, grossRents: grossData, netEffRents: netData } = makeUnitPricingHistory(baseRent);
+  const numPoints = labels.length;
 
-  // Pick 3 random override indices
+  // Seed 2-4 override events at random day indices
   const overrideIndices = [];
-  while (overrideIndices.length < 3) {
-    const idx = Math.floor(Math.random() * numPoints);
+  const numOverrides = Math.floor(Math.random() * 3) + 2;
+  while (overrideIndices.length < numOverrides) {
+    const idx = Math.floor(Math.random() * 70) + 5;
     if (!overrideIndices.includes(idx)) overrideIndices.push(idx);
-  }
-
-  let price = priorRent;
-  for (let i = 0; i < numPoints; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - (numPoints - 1 - i));
-    labels.push(monthNames[d.getMonth()] + ' ' + d.getDate());
-    price += (Math.random() * 6 - 2);
-    grossData.push(Math.round(price));
-    netData.push(Math.round(price - (100 + Math.random() * 50)));
   }
 
   // Override markers on the gross rent line
@@ -1464,6 +2125,9 @@ function openUnitPricingPanel(el) {
           titleColor: '#e5e7eb',
           bodyColor: '#9ca3af',
           padding: 10,
+          titleFont: { family: 'DM Sans', size: 12, weight: '600' },
+          bodyFont: { family: 'DM Sans', size: 11 },
+          footerFont: { family: 'DM Sans', size: 11 },
           callbacks: {
             label: function(ctx) {
               const isOverride = ctx.datasetIndex === 0 && overrideIndices.includes(ctx.dataIndex);
@@ -1476,12 +2140,14 @@ function openUnitPricingPanel(el) {
       },
       scales: {
         x: {
-          ticks: { color: '#6b7280', font: { size: 9 }, maxTicksLimit: 8 },
-          grid: { color: '#2a2d35' },
+          display: true,
+          ticks: { color: '#9ca3af', font: { family: 'DM Sans', size: 9 }, maxTicksLimit: 10, maxRotation: 0, autoSkip: true },
+          grid: { color: 'rgba(255,255,255,0.06)' },
         },
         y: {
-          ticks: { color: '#6b7280', font: { size: 9 }, callback: v => '$' + v },
-          grid: { color: '#2a2d35' },
+          display: true,
+          ticks: { color: '#9ca3af', font: { family: 'DM Sans', size: 9 }, callback: v => '$' + v.toLocaleString() },
+          grid: { color: 'rgba(255,255,255,0.06)' },
         },
       },
     },
@@ -1536,6 +2202,23 @@ let calSelectedEnd = null;
 
 function openCalendar(target, btnEl) {
   calTarget = target;
+  calAnchor = btnEl;
+  calendarCallback = null;
+  const cal = document.getElementById('calendarModal');
+  const rect = btnEl.getBoundingClientRect();
+  cal.style.left = rect.left + 'px';
+  cal.style.top = (rect.bottom + 6) + 'px';
+  renderCalendar();
+  cal.classList.add('open');
+}
+
+let calendarCallback = null;
+let calendarTargetBtn = null;
+
+function openCalendarFor(btnId, callback, btnEl) {
+  calTarget = '__custom__';
+  calendarTargetBtn = btnId;
+  calendarCallback = callback ?? null;
   calAnchor = btnEl;
   const cal = document.getElementById('calendarModal');
   const rect = btnEl.getBoundingClientRect();
@@ -1598,8 +2281,9 @@ function selectCalDay(day) {
   } else if (calTarget === 'noteExpiry') {
     noteExpiryDate = usDate;
     document.getElementById('noteExpiryLabel').textContent = usDate;
-  } else if (calTarget === 'moveIn') {
-    document.getElementById('moveInDateLabel').textContent = usDate;
+  } else if (calTarget === '__custom__' && typeof calendarCallback === 'function') {
+    const dateObj = new Date(calYear, calMonth, day);
+    calendarCallback(usDate, dateObj);
   }
   closeCalendar();
 }
@@ -1620,6 +2304,10 @@ function toggleAdvDrawer() {
 populateFilters();
 restoreFilterState();
 updateClearBtn();
+const _slotA = document.getElementById('classABadgeSlot');
+const _slotB = document.getElementById('classBBadgeSlot');
+if (_slotA) _slotA.innerHTML = classBadge('A');
+if (_slotB) _slotB.innerHTML = classBadge('B');
 renderTable();
 </script>
 </body>

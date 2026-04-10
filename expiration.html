@@ -48,15 +48,15 @@
   <!-- ── Main ── -->
   <div class="main">
     <div class="table-wrap" id="expTableWrap">
-      <table class="data-table" id="expTable">
+      <table class="data-table" id="expTable" style="width:100%;">
         <thead>
           <tr>
-            <th style="min-width:200px;position:sticky;left:0;background:var(--surface);z-index:11;">Community<span class="th-sub">Unit type</span></th>
-            <th style="text-align:right;">Adjustment<br><span class="th-sub">Count</span></th>
-            <th style="text-align:right;">Rec.<br><span class="th-sub">Expiration</span></th>
-            <th style="text-align:right;">Forecasted<br><span class="th-sub">Expiration</span></th>
-            <th style="text-align:right;">Sum<br><span class="th-sub">Delta</span></th>
-            <th style="text-align:right;">Max<br><span class="th-sub">Delta</span></th>
+            <th style="min-width:280px;position:sticky;left:0;background:var(--surface);z-index:11;">Community<span class="th-sub">Unit Type</span></th>
+            <th style="min-width:140px;text-align:center;">Adjustment<br><span class="th-sub">Count</span></th>
+            <th style="min-width:140px;text-align:center;">Rec.<br><span class="th-sub">Expiration</span></th>
+            <th style="min-width:160px;text-align:center;">Forecasted<br><span class="th-sub">Expiration</span></th>
+            <th style="min-width:120px;text-align:center;">Sum<br><span class="th-sub">Delta</span></th>
+            <th style="min-width:120px;text-align:center;">Max<br><span class="th-sub">Delta</span></th>
           </tr>
         </thead>
         <tbody id="expBody"></tbody>
@@ -280,11 +280,11 @@ function renderExpTable() {
           <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,2 8,6 4,10"/></svg>
         </button>${comm.name}
       </td>
-      <td style="text-align:right;">${adjCount}</td>
-      <td style="text-align:right;">${totalRecExp}</td>
-      <td style="text-align:right;color:var(--text-secondary);">${totalForecasted}</td>
-      <td style="text-align:right;color:${totalDelta>0?'#e05252':'#16a34a'};">${totalDelta>0?'+':''}${totalDelta}</td>
-      <td style="text-align:right;color:${absWorst>3?'#e05252':absWorst>0?'#92400e':'#15803d'};">${worstDelta>0?'+':''}${worstDelta}</td>
+      <td style="text-align:center;">${adjCount}</td>
+      <td style="text-align:center;">${totalRecExp}</td>
+      <td style="text-align:center;color:var(--text-secondary);">${totalForecasted}</td>
+      <td style="text-align:center;color:${totalDelta>0?'#e05252':'#15803d'};font-weight:600;">${totalDelta>0?'+':''}${totalDelta}</td>
+      <td style="text-align:center;color:${absWorst>3?'#e05252':absWorst>0?'#92400e':'#15803d'};font-weight:600;">${worstDelta>0?'+':''}${worstDelta}</td>
     `;
     tb.appendChild(tr);
 
@@ -308,13 +308,13 @@ function renderExpTable() {
       btr.onclick = (e) => { if(!e.target.closest('button')) openExpModal(comm.id, bt.type); };
       btr.innerHTML = `
         <td style="position:sticky;left:0;background:#fafbfc;padding-left:28px;z-index:5;white-space:nowrap;font-weight:500;color:var(--text-primary);">${bt.type}<span style="color:var(--accent);margin-left:6px;font-size:11px;opacity:0.7;">\u2192</span></td>
-        <td style="text-align:right;">${btAdj}</td>
-        <td style="text-align:right;">${btRec}</td>
-        <td style="text-align:right;">
+        <td style="text-align:center;">${btAdj}</td>
+        <td style="text-align:center;">${btRec}</td>
+        <td style="text-align:center;">
           <button onclick="event.stopPropagation();openExpKpiPanel('${comm.id}','${bt.type}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-weight:600;font-size:12.5px;text-decoration:underline;text-underline-offset:2px;padding:0;">${btFor}</button>
         </td>
-        <td style="text-align:right;color:${btDelta>0?'#e05252':'#16a34a'};">${btDelta>0?'+':''}${btDelta}</td>
-        <td style="text-align:right;color:${absBtWorst>3?'#e05252':absBtWorst>0?'#92400e':'#15803d'};">${btWorst>0?'+':''}${btWorst}</td>
+        <td style="text-align:center;color:${btDelta>0?'#e05252':'#15803d'};font-weight:600;">${btDelta>0?'+':''}${btDelta}</td>
+        <td style="text-align:center;color:${absBtWorst>3?'#e05252':absBtWorst>0?'#92400e':'#15803d'};font-weight:600;">${btWorst>0?'+':''}${btWorst}</td>
       `;
       tb.appendChild(btr);
     });
@@ -444,15 +444,18 @@ function renderExpKpiChart(commId, btType) {
         legend:{display:false},
         tooltip:{
           mode:'index',intersect:false,backgroundColor:'#1e2028',borderColor:'#3d4150',borderWidth:1,titleColor:'#e5e7eb',bodyColor:'#9ca3af',padding:10,
+          titleFont:{family:'DM Sans',size:12,weight:'600'},
+          bodyFont:{family:'DM Sans',size:11},
+          footerFont:{family:'DM Sans',size:11},
           callbacks:{
             label:ctx=>ctx.dataset.label==='Rent Forecast'?` Rent Forecast: $${ctx.parsed.y.toLocaleString()}`:`  ${ctx.dataset.label}: ${ctx.parsed.y} units`
           }
         }
       },
       scales: {
-        x:{ticks:{color:'#6b7280',font:{size:9},maxRotation:0},grid:{color:'#2a2d35'}},
-        y:{position:'left',title:{display:true,text:'Units',color:'#6b7280',font:{size:10}},ticks:{color:'#6b7280',font:{size:9}},grid:{color:'#2a2d35'},beginAtZero:true},
-        y2:{position:'right',title:{display:true,text:'$/month',color:'#6b7280',font:{size:10}},ticks:{color:'#6b7280',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{drawOnChartArea:false}}
+        x:{ticks:{color:'#9ca3af',font:{family:'DM Sans',size:9},maxRotation:0},grid:{color:'rgba(255,255,255,0.06)'}},
+        y:{position:'left',title:{display:true,text:'Units',color:'#9ca3af',font:{family:'DM Sans',size:10}},ticks:{color:'#9ca3af',font:{family:'DM Sans',size:9}},grid:{color:'rgba(255,255,255,0.06)'},beginAtZero:true},
+        y2:{position:'right',title:{display:true,text:'$/month',color:'#9ca3af',font:{family:'DM Sans',size:10}},ticks:{color:'#9ca3af',font:{family:'DM Sans',size:9},callback:v=>'$'+v.toLocaleString()},grid:{drawOnChartArea:false}}
       }
     }
   });

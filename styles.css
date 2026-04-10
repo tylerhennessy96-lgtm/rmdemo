@@ -1037,16 +1037,17 @@ table.modal-table .info-icon {
 
 .exp-kpi-panel {
   height: 320px;
-  background: var(--nav-bg);
+  background: linear-gradient(180deg, #1e2128 0%, #23262f 100%);
   border-top: 1px solid var(--nav-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: height .3s ease;
+  transition: transform .3s cubic-bezier(0.4, 0, 0.2, 1), height .3s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
+  transform: translateY(0);
 }
 
-.exp-kpi-wrap.minimized .exp-kpi-panel { height: 0; }
+.exp-kpi-wrap.minimized .exp-kpi-panel { transform: translateY(calc(100% - 44px)); }
 .exp-kpi-wrap.minimized .panel-collapse-handle svg { transform: rotate(180deg); }
 
 /* ── Exposure Panel ──────────────────────────────────────── */
@@ -1057,15 +1058,19 @@ table.modal-table .info-icon {
 .exposure-panel {
   width: 100%;
   height: 560px;
-  background: var(--nav-bg);
+  background: linear-gradient(180deg, #1e2128 0%, #23262f 100%);
   border-top: 1px solid var(--nav-border);
-  transition: height .3s ease;
+  transition: transform .3s cubic-bezier(0.4, 0, 0.2, 1), height .3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transform: translateY(0);
 }
 
-.exposure-panel.panel-closed { height: 0; }
+.exposure-panel.panel-closed {
+  transform: translateY(100%);
+  height: 0;
+}
 
 /* ── Unit Pricing Panel ──────────────────────────────────── */
 .unit-pricing-wrap {
@@ -1075,15 +1080,19 @@ table.modal-table .info-icon {
 .unit-pricing-panel {
   width: 100%;
   height: 420px;
-  background: var(--nav-bg);
+  background: linear-gradient(180deg, #1e2128 0%, #23262f 100%);
   border-top: 1px solid var(--nav-border);
-  transition: height .3s ease;
+  transition: transform .3s cubic-bezier(0.4, 0, 0.2, 1), height .3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transform: translateY(0);
 }
 
-.unit-pricing-panel.panel-closed { height: 0; }
+.unit-pricing-panel.panel-closed {
+  transform: translateY(100%);
+  height: 0;
+}
 
 /* When both panels are open, share space */
 .panels-container.both-open .exposure-panel { height: 360px; }
