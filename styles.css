@@ -1047,7 +1047,8 @@ table.modal-table .info-icon {
   transform: translateY(0);
 }
 
-.exp-kpi-wrap.minimized .exp-kpi-panel { transform: translateY(calc(100% - 44px)); }
+.exp-kpi-wrap.minimized .exp-kpi-panel { transform: translateY(100%); }
+.exp-kpi-wrap.minimized .panel-collapse-handle { display: none; }
 .exp-kpi-wrap.minimized .panel-collapse-handle svg { transform: rotate(180deg); }
 
 /* ── Exposure Panel ──────────────────────────────────────── */
