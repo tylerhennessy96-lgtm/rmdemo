@@ -10,15 +10,11 @@
 <body>
 <div class="app">
   <nav class="topnav">
-    <a href="pricing.html" class="logo">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <rect x="17" y="1" width="13" height="13" rx="1.5" fill="#e8007d"/>
-        <rect x="2" y="16" width="13" height="13" rx="1.5" fill="#f06292"/>
-        <rect x="10" y="9" width="12" height="12" rx="1.5" fill="#c4005e" opacity="0.85"/>
-      </svg>
-      <div style="display:flex;flex-direction:column;line-height:1.1;margin-left:8px;">
-        <span style="font-size:11px;font-weight:500;color:#a0a0a0;letter-spacing:.02em;">Dynamica</span>
-        <span style="font-size:13px;font-weight:700;color:#e5e7eb;letter-spacing:.01em;">SmartRents</span>
+    <a href="pricing.html" style="display:flex;align-items:center;gap:8px;margin-right:32px;text-decoration:none;flex-shrink:0;">
+      <img src="engine_logo (2).png" style="height:28px;width:auto;display:block;" alt="Dynamica SmartRents">
+      <div style="display:flex;flex-direction:column;line-height:1;gap:2px;">
+        <span style="font-family:'Inter',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.18em;color:#ffffff;text-transform:uppercase;">DYNAMICA</span>
+        <span style="font-family:'Inter',sans-serif;font-size:12px;font-weight:400;letter-spacing:0.02em;color:rgba(255,255,255,0.55);">SmartRents</span>
       </div>
     </a>
     <div class="nav-tabs">
@@ -164,7 +160,7 @@ function populateFilters(){const bar=document.getElementById('filterBar');bar.in
   const clearBtn = document.createElement('button');
   clearBtn.id = 'clearFiltersBtn';
   clearBtn.onclick = clearAllFilters;
-  clearBtn.style.cssText = 'display:none;background:none;border:none;color:#6b7280;font-family:DM Sans,sans-serif;font-size:11.5px;cursor:pointer;padding:0 8px;text-decoration:underline;text-underline-offset:2px;white-space:nowrap;';
+  clearBtn.style.cssText = 'display:none;background:none;border:none;color:#6b7280;font-family:Inter,sans-serif;font-size:11.5px;cursor:pointer;padding:0 8px;text-decoration:underline;text-underline-offset:2px;white-space:nowrap;';
   clearBtn.textContent = 'Clear filters';
   bar.appendChild(clearBtn);
 }
@@ -245,15 +241,15 @@ function getFilteredCommunities() {
 function pInp(val, suffix, key) {
   const ck = key in paramChanges;
   const bd = ck ? '2px solid var(--accent)' : '1px solid transparent';
-  return `<input type="text" value="${val}${suffix}" data-key="${key}" onfocus="this.style.border='1px solid var(--accent)';this.style.background='#fff'" onblur="fmtP(this,'${suffix}');this.style.background='transparent'" oninput="onP(this,'${key}','${suffix}')" style="width:62px;text-align:center;border:${bd};border-radius:4px;padding:4px 6px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:transparent;outline:none;color:var(--text-primary);">`;
+  return `<input type="text" value="${val}${suffix}" data-key="${key}" onfocus="this.style.border='1px solid var(--accent)';this.style.background='#fff'" onblur="fmtP(this,'${suffix}');this.style.background='transparent'" oninput="onP(this,'${key}','${suffix}')" style="width:62px;text-align:center;border:${bd};border-radius:4px;padding:4px 6px;font-family:'Inter',sans-serif;font-size:12.5px;background:transparent;outline:none;color:var(--text-primary);">`;
 }
 function dInp(val, key) {
   const ck = key in paramChanges;
   const bd = ck ? '2px solid var(--accent)' : '1px solid transparent';
-  return `<input type="text" value="${val}" data-key="${key}" onfocus="this.style.border='1px solid var(--accent)';this.style.background='#fff'" onblur="this.style.background='transparent';if(!this.dataset.changed)this.style.border='1px solid transparent'" oninput="onD(this,'${key}')" style="width:54px;text-align:center;border:${bd};border-radius:4px;padding:4px 6px;font-family:'DM Sans',sans-serif;font-size:12.5px;background:transparent;outline:none;color:var(--text-primary);">`;
+  return `<input type="text" value="${val}" data-key="${key}" onfocus="this.style.border='1px solid var(--accent)';this.style.background='#fff'" onblur="this.style.background='transparent';if(!this.dataset.changed)this.style.border='1px solid transparent'" oninput="onD(this,'${key}')" style="width:54px;text-align:center;border:${bd};border-radius:4px;padding:4px 6px;font-family:'Inter',sans-serif;font-size:12.5px;background:transparent;outline:none;color:var(--text-primary);">`;
 }
 function selInp(val, key) {
-  return `<select onchange="onS(this,'${key}')" style="border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-family:'DM Sans',sans-serif;font-size:12px;background:var(--surface);outline:none;color:var(--text-primary);cursor:pointer;"><option ${val==='Individual'?'selected':''}>Individual</option><option ${val==='Unit Group'?'selected':''}>Unit Group</option></select>`;
+  return `<select onchange="onS(this,'${key}')" style="border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-family:'Inter',sans-serif;font-size:12px;background:var(--surface);outline:none;color:var(--text-primary);cursor:pointer;"><option ${val==='Individual'?'selected':''}>Individual</option><option ${val==='Unit Group'?'selected':''}>Unit Group</option></select>`;
 }
 function togInp(val, key) {
   return `<label class="toggle" style="margin:0 auto;"><input type="checkbox" ${val?'checked':''} onchange="onT(this,'${key}')"><span class="toggle-slider"></span></label>`;
@@ -318,21 +314,16 @@ const SECTION_COLUMNS = {
     { label:'Rel. Concession',   render:(p,k)=>pInp(p.relConcession,'%',k('relConcession')) },
   ],
   exposure: [
-    { label:'Prio 1', render:(p,k)=>pInp(p.exposurePrio1,'%',k('exposurePrio1')) },
-    { label:'Prio 2', render:(p,k)=>pInp(p.exposurePrio2,'%',k('exposurePrio2')) },
-    { label:'Max',    render:(p,k)=>pInp(p.exposureMax,'%',k('exposureMax')) },
-    { label:'Min',    render:(p,k)=>pInp(p.exposureMin,'%',k('exposureMin')) },
+    { label:'Prio 1 (%)', render:(p,k)=>pInp(p.exposurePrio1,'%',k('exposurePrio1')) },
+    { label:'Prio 2 (%)', render:(p,k)=>pInp(p.exposurePrio2,'%',k('exposurePrio2')) },
   ],
   corridor: [
-    { label:'Max',    render:(p,k)=>pInp(p.compCorrMax,'%',k('compCorrMax')) },
-    { label:'Min',    render:(p,k)=>pInp(p.compCorrMin,'%',k('compCorrMin')) },
-    { label:'Prio 1', render:(p,k)=>pInp(p.compCorrPrio1,'%',k('compCorrPrio1')) },
-    { label:'Prio 2', render:(p,k)=>pInp(p.compCorrPrio2,'%',k('compCorrPrio2')) },
+    { label:'Max (%)', render:(p,k)=>pInp(p.compCorrMax,'%',k('compCorrMax')) },
+    { label:'Min (%)', render:(p,k)=>pInp(p.compCorrMin,'%',k('compCorrMin')) },
   ],
   concessions: [
-    { label:'Trigger Threshold', render:(p,k)=>pInp(p.concessionTrigger,'%',k('concessionTrigger')) },
-    { label:'LT Lower',          render:(p,k)=>dInp(p.ltLower,k('ltLower')) },
-    { label:'LT Upper',          render:(p,k)=>dInp(p.ltUpper,k('ltUpper')) },
+    { label:'Prio 1 (%)', render:(p,k)=>pInp(p.concessionPrio1,'%',k('concessionPrio1')) },
+    { label:'Prio 2 (%)', render:(p,k)=>pInp(p.concessionPrio2,'%',k('concessionPrio2')) },
   ],
 };
 
@@ -428,14 +419,21 @@ function renderBestPriceSection() {
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">No communities match filters</div>`;
   }
   const rows = data.map(comm => {
-    const k = comm.id + '-property-inheritBestPrice';
+    const isOn = comm.params.inheritBestPrice;
     return `
       <tr class="row-property">
         <td style="font-weight:600;padding:10px 12px;">${comm.name}</td>
         <td style="color:var(--text-secondary);padding:10px 12px;font-size:12px;">${comm.metro}</td>
         <td style="color:var(--text-secondary);padding:10px 12px;font-size:12px;">${comm.state}</td>
         <td style="color:var(--text-secondary);padding:10px 12px;font-size:12px;">${comm.rm}</td>
-        <td style="text-align:center;padding:10px 12px;">${togInp(comm.params.inheritBestPrice, k)}</td>
+        <td style="text-align:center;padding:10px 12px;">
+          <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
+            <div class="toggle-switch" onclick="toggleBestPrice('${comm.id}',this)" data-on="${isOn ? 'true' : 'false'}" style="width:36px;height:20px;border-radius:10px;background:${isOn ? 'var(--accent)' : '#d1d5db'};position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;">
+              <div style="position:absolute;top:2px;left:${isOn ? '18px' : '2px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
+            </div>
+            <span style="font-size:12px;color:var(--text-secondary);">${isOn ? 'On' : 'Off'}</span>
+          </label>
+        </td>
       </tr>
     `;
   }).join('');
@@ -455,6 +453,19 @@ function renderBestPriceSection() {
       </table>
     </div>
   `;
+}
+
+function toggleBestPrice(commId, el) {
+  const comm = PARAMETERS_DATA.find(c => c.id === commId);
+  if (!comm) return;
+  comm.params.inheritBestPrice = !comm.params.inheritBestPrice;
+  const isOn = comm.params.inheritBestPrice;
+  el.style.background = isOn ? 'var(--accent)' : '#d1d5db';
+  el.dataset.on = isOn ? 'true' : 'false';
+  el.querySelector('div').style.left = isOn ? '18px' : '2px';
+  el.parentElement.querySelector('span').textContent = isOn ? 'On' : 'Off';
+  paramChanges['bestprice_' + commId] = isOn;
+  checkSave();
 }
 
 // ── Rounding ─────────────────────────────────────────────
@@ -482,18 +493,18 @@ function renderRoundingSection() {
         <td style="position:sticky;left:0;background:var(--surface);z-index:5;font-weight:600;white-space:nowrap;padding:10px 12px;">${comm.name}</td>
         <td style="color:var(--text-secondary);padding:10px 12px;font-size:12px;">${comm.metro}</td>
         <td style="padding:8px 10px;">
-          <select onchange="onS(this,'${km}');renderParamPanel();" style="border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'DM Sans',sans-serif;font-size:12px;background:var(--surface);color:var(--text-primary);cursor:pointer;outline:none;">
+          <select onchange="onS(this,'${km}');renderParamPanel();" style="border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'Inter',sans-serif;font-size:12px;background:var(--surface);color:var(--text-primary);cursor:pointer;outline:none;">
             <option value="nearest" ${method==='nearest'?'selected':''}>Round to nearest</option>
             <option value="ceiling" ${method==='ceiling'?'selected':''}>Always round up</option>
             <option value="floor"   ${method==='floor'?'selected':''}>Always round down</option>
           </select>
         </td>
         <td style="padding:8px 10px;">
-          <select onchange="onS(this,'${ka}');renderParamPanel();" style="border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'DM Sans',sans-serif;font-size:12px;background:var(--surface);color:var(--text-primary);cursor:pointer;outline:none;">
+          <select onchange="onS(this,'${ka}');renderParamPanel();" style="border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'Inter',sans-serif;font-size:12px;background:var(--surface);color:var(--text-primary);cursor:pointer;outline:none;">
             ${[5,10,25,50,100].map(v=>`<option value="${v}" ${amount===v?'selected':''}>$${v}</option>`).join('')}
           </select>
         </td>
-        <td style="padding:8px 10px;font-size:12px;color:var(--text-secondary);font-family:'DM Mono',monospace;">$${avg.toLocaleString()} → <strong style="color:var(--accent);">$${rounded.toLocaleString()}</strong></td>
+        <td style="padding:8px 10px;font-size:12px;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;">$${avg.toLocaleString()} → <strong style="color:var(--accent);">$${rounded.toLocaleString()}</strong></td>
       </tr>
     `;
   }).join('');
@@ -546,14 +557,14 @@ function renderCompetitorSection() {
         <td style="color:var(--text-secondary);padding:10px 12px;">${comm.state}</td>
         <td style="color:var(--text-secondary);padding:10px 12px;font-size:12px;">${comm.metro}</td>
         <td style="padding:10px 12px;">
-          <select onchange="setCommunityModel('${comm.id}',this.value)" style="border:1px solid var(--border-mid);border-radius:var(--radius);padding:5px 8px;font-family:'DM Sans',sans-serif;font-size:12px;background:var(--surface);outline:none;color:var(--text-primary);cursor:pointer;width:100%;">
+          <select onchange="setCommunityModel('${comm.id}',this.value)" style="border:1px solid var(--border-mid);border-radius:var(--radius);padding:5px 8px;font-family:'Inter',sans-serif;font-size:12px;background:var(--surface);outline:none;color:var(--text-primary);cursor:pointer;width:100%;">
             <option value="competitor" ${model==='competitor' ? 'selected' : ''}>Competitor-Informed</option>
             <option value="blind"      ${model==='blind'      ? 'selected' : ''}>Blind Pricing</option>
           </select>
         </td>
         <td style="color:var(--text-secondary);padding:10px 12px;font-size:12px;">${comm.rm}</td>
         <td style="padding:10px 12px;">
-          <input type="text" placeholder="e.g. Legal counsel recommendation" value="${comm.competitorExclusionReason ?? ''}" onblur="setExclusionReason('${comm.id}', this.value)" style="border:none;border-bottom:1px solid var(--border-mid);background:transparent;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-secondary);padding:2px 0;outline:none;width:100%;">
+          <input type="text" placeholder="e.g. Legal counsel recommendation" value="${comm.competitorExclusionReason ?? ''}" onblur="setExclusionReason('${comm.id}', this.value)" style="border:none;border-bottom:1px solid var(--border-mid);background:transparent;font-family:'Inter',sans-serif;font-size:12px;color:var(--text-secondary);padding:2px 0;outline:none;width:100%;">
         </td>
       </tr>
     `;
@@ -592,7 +603,7 @@ function renderHistorySection() {
   return `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:14px 16px;background:var(--surface);border-radius:8px;border:1px solid var(--border);">
       <span style="font-size:13px;color:var(--text-secondary);">View parameters as of:</span>
-      <input type="date" id="historyDate" onchange="loadHistoryParams(this.value)" style="border:1px solid var(--border-mid);border-radius:var(--radius);padding:6px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-primary);outline:none;background:var(--surface);">
+      <input type="date" id="historyDate" onchange="loadHistoryParams(this.value)" style="border:1px solid var(--border-mid);border-radius:var(--radius);padding:6px 10px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text-primary);outline:none;background:var(--surface);">
       <button onclick="setHistoryDate(30)" class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">30 days ago</button>
       <button onclick="setHistoryDate(60)" class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">60 days ago</button>
       <button onclick="setHistoryDate(90)" class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">90 days ago</button>

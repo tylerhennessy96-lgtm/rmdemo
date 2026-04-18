@@ -198,7 +198,7 @@ const PARAM_DEFAULTS = {
   maxPriceChange:10, minPriceChange:-10, unitGroup:'Individual',
   exposurePrio1:8, exposurePrio2:3, exposureMax:10, exposureMin:-45,
   compCorrMax:10, compCorrMin:-45, compCorrPrio1:30, compCorrPrio2:40,
-  concessionTrigger:5, ltLower:12, ltUpper:24,
+  concessionPrio1:15, concessionPrio2:25,
   modelHoldDays:0, modelPriceDown:-0.5, modelPriceUp:5, manualHoldDays:1,
   freeDaysOnNotice:2, freeDaysVacant:2, onNoticeMax:15, vacantMax:30,
   onNoticeRecovery:100, vacantRecovery:100,
@@ -214,8 +214,21 @@ const COMPETITOR_EXCLUSIONS = [
 
 const PARAMETERS_DATA = COMMUNITIES.map(c => ({
   ...c,
-  params: { ...PARAM_DEFAULTS },
-  bedTypes: ['1 Bed','2 Bed','3 Bed'].map(bt => ({ type: bt, params: { ...PARAM_DEFAULTS } })),
+  params: {
+    ...PARAM_DEFAULTS,
+    inheritBestPrice: Math.random() > 0.4,
+    concessionPrio1: Math.floor(Math.random() * 20 + 10),
+    concessionPrio2: Math.floor(Math.random() * 30 + 20),
+  },
+  bedTypes: ['1 Bed','2 Bed','3 Bed'].map(bt => ({
+    type: bt,
+    params: {
+      ...PARAM_DEFAULTS,
+      inheritBestPrice: Math.random() > 0.4,
+      concessionPrio1: Math.floor(Math.random() * 20 + 10),
+      concessionPrio2: Math.floor(Math.random() * 30 + 20),
+    },
+  })),
 }));
 
 // Renewals data
