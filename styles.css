@@ -1176,9 +1176,12 @@ table.modal-table .info-icon {
   min-height: 0;
 }
 
-.chart-box > div:last-child {
+.chart-canvas-wrap {
+  position: relative;
+  width: 100%;
   flex: 1;
-  min-height: 0;
+  min-height: 140px;
+  height: 180px;
 }
 
 .chart-label {

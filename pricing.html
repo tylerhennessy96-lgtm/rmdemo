@@ -179,7 +179,7 @@
                     <span class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span>60 Day</span>
                   </div>
                 </div>
-                <div style="position:relative;width:100%;flex:1;min-height:0;">
+                <div class="chart-canvas-wrap" id="exposureChartWrap">
                   <canvas id="exposureChart"></canvas>
                 </div>
               </div>
@@ -193,7 +193,7 @@
                     <span class="legend-item"><span class="legend-line" style="background:#e8007d"></span>Windsor Median</span>
                   </div>
                 </div>
-                <div style="position:relative;width:100%;flex:1;min-height:0;">
+                <div class="chart-canvas-wrap" id="compChartWrap">
                   <canvas id="compChart"></canvas>
                 </div>
               </div>
@@ -1517,14 +1517,74 @@ function toggleExposureForProp(key, label, baseRent) {
   document.getElementById('exposurePropName').textContent = label;
   exposurePropId = key;
   currentExposureBaseRent = baseRent;
+
+  // Destroy existing charts before the panel opens so canvas is clean
+  if (window.exposureChartInst) { window.exposureChartInst.destroy(); window.exposureChartInst = null; }
+  if (window.compChartInst) { window.compChartInst.destroy(); window.compChartInst = null; }
+
+  const panel = document.getElementById('exposurePanel');
+  const wasAlreadyOpen = exposureOpen && !panel.classList.contains('panel-closed');
+
   if (!exposureOpen) toggleExposure();
   else {
-    document.getElementById('exposurePanel').classList.remove('panel-closed');
+    panel.classList.remove('panel-closed');
     document.getElementById('exposureWrap').classList.remove('panel-closed');
   }
-  renderCharts(baseRent);
+
+  // Create charts and force-resize to handle any layout settling.
+  // The canvas wrappers now have a fixed CSS height (180px) so Chart.js
+  // can always measure a real dimension, but we still defer on first open
+  // to let the panel transition finish and resize as a safety net.
+  function createCharts() {
+    try {
+      renderCharts(baseRent);
+      // Immediate resize after creation
+      if (window.exposureChartInst) window.exposureChartInst.resize();
+      if (window.compChartInst) window.compChartInst.resize();
+      // Delayed resize to catch any remaining layout settling
+      setTimeout(() => {
+        if (window.exposureChartInst) window.exposureChartInst.resize();
+        if (window.compChartInst) window.compChartInst.resize();
+      }, 150);
+    } catch (err) {
+      console.error('Exposure chart render failed:', err);
+    }
+  }
+
+  if (wasAlreadyOpen) {
+    createCharts();
+  } else {
+    // Wait for the CSS transition (.3s) to finish
+    setTimeout(createCharts, 350);
+  }
+
   updatePanelState();
 }
+
+// ── ResizeObserver for exposure chart containers ──────────
+// Catches container height changes (panel open/resize/window resize)
+// and forces Chart.js to remeasure.
+(function initExposureResizeObservers() {
+  const expWrap = document.getElementById('exposureChartWrap');
+  const compWrap = document.getElementById('compChartWrap');
+  if (!expWrap || !compWrap) return;
+  const ro = new ResizeObserver((entries) => {
+    try {
+      for (const entry of entries) {
+        const h = entry.contentRect.height;
+        if (h < 50) continue; // container not yet at final size
+        if (entry.target === expWrap && window.exposureChartInst) {
+          window.exposureChartInst.resize();
+        }
+        if (entry.target === compWrap && window.compChartInst) {
+          window.compChartInst.resize();
+        }
+      }
+    } catch (_) { /* chart may be mid-destroy */ }
+  });
+  ro.observe(expWrap);
+  ro.observe(compWrap);
+})();
 
 function setChartMode(mode) {
   chartMode = mode;
