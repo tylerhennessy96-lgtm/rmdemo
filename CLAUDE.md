@@ -1,207 +1,184 @@
-# Windsor Revenue Management System — POC
+# Dynamica SmartRents — Revenue Management Platform POC
 
-## What this is
-A UI prototype / proof-of-concept for a **revenue management platform** built for **GID Multifamily / Windsor Communities** — a large US multifamily apartment operator. This is a demo/sales tool, not a production app. There is no backend. All data is seeded in `data.js`.
+## Client
+GID Multifamily / Windsor Communities
+12 communities across TX, FL, GA, NC, VA
 
-The design is inspired by a Figma mockup (dark nav, white body, teal accent). Do not re-use or reference any third-party IP — all designs should be original recreations in spirit only.
+## Stack
+- Pure HTML + CSS + Vanilla JS (no framework, no build step)
+- Chart.js (CDN) for all data visualisation
+- Inter font (Google Fonts)
+- Accent color: #e8007d (Dynamica pink)
+- Nav background: #1a1a2e
+- All shared styles in styles.css
+- All seed data in data.js
 
----
+## Live URL
+https://tylerhennessy96-lgtm.github.io/rmdemo/
 
-## Tech stack
-- **Pure HTML + CSS + Vanilla JS** — no framework, no build step, no npm
-- Files open directly in a browser
-- Charts use **Chart.js 4** via CDN (`https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js`)
-- Fonts: **DM Sans** + **DM Mono** via Google Fonts
-- All shared styles in `styles.css`
-- All seed data in `data.js` (loaded via `<script src="data.js">` on every page)
+## Local Path
+/Users/tylerhennessy/rmdemo/
 
----
+## GitHub
+tylerhennessy96-lgtm/rmdemo
 
-## File structure
-```
-rmdemo/
-├── CLAUDE.md               ← you are here
-├── index.html              ← redirects to pricing.html
-├── styles.css              ← ALL shared styles (do not inline styles in HTML unless minor tweaks)
-├── data.js                 ← ALL seed data and data helper functions
-├── pricing.html            ← Pricing tab: New Lease subtab (BUILT)
-├── pricing-renewals.html   ← Pricing tab: Renewals subtab (TODO)
-├── expiration.html         ← Expiration Management tab (TODO)
-├── term.html               ← Term Management: Availability subtab (TODO)
-├── term-premiums.html      ← Term Management: Premiums subtab (TODO)
-├── concessions.html        ← Concession Management tab (TODO)
-├── rent-control.html       ← Rent Control tab (TODO)
-├── parameters.html         ← Menu → Parameters (TODO)
-└── demand.html             ← Menu → Demand Forecast (TODO)
-```
+## Pages
 
----
+### pricing.html — New Lease Pricing (complete)
+- Community → Bed Type → Unit accordion table
+- Stats bar: Vacant/30d/60d exposure, concessed units, avg conc, overrides, YoY
+- Columns: Property, Avail, RC, Status, Move-out, Avail Date, Alerts, 
+  Prior Lease Net Eff. (gross rent tooltip), Anchor Price (editable),
+  Rec. Rent Expired, Rec. Rent Current, Delta, Price Change $/%,
+  LT (lease term modal), Att. Value, Net Eff. Rent, Concs. Amt, Notes
+- Community Class A/B badges (gold/slate)
+- Community attribute modal (year built, amenities)
+- Unit attribute modal (pinned floorplan/area/floor)
+- Lease Term modal: 90vw, Chart.js line chart (Gross/Net Eff lines),
+  transposed horizontal table, recommended term = cheapest net eff,
+  hold settings in footer
+- Exposure & Price KPI panel (fixed bottom, slide-up):
+  stacked area chart (Vacant/30d/60d), comp price line chart,
+  Daily/Monthly toggle, date selectors in header bar
+- Unit Pricing History panel (daily x-axis, override dots)
+- Advanced filters drawer (unit ID, unit type, floorplan, 
+  community class, RC status, alerts, concessions, availability)
+- Anchor price: seeded, always populated, inline-editable
+- Non-monthly concessions excluded from Net Eff. calc
+- Price overrides: abs/% entry, cascades property→bedtype→unit
+- Ask RM copilot: floating button + general panel + unit/bed type row panel
 
-## Design system
+### pricing-renewals.html — Renewals (complete)
+- Same accordion structure
+- Stats bar: Avg Renewal Rate, Price Change Net Eff, Delta to New Lease
+- Columns include: Lease End, Days to Lease End, Days to Offer,
+  Lease ID, Lease Term, Lease Price, Concs Amt, Net Eff Lease Price,
+  Renewal Offer Price, Renewal Offer Term (LT modal), 
+  Renewal Price Change %, Delta to New Lease %, Status, Manual Push
+- RC link icon → jumps to rent control management for that unit
+- Renewal Terms modal: same chart/table as LT modal (no move-in date)
+- Community attribute modal + unit attribute modal
 
-### Colors (CSS variables in styles.css)
-```
---nav-bg:         #16181d      ← dark charcoal nav/header background
---nav-border:     #2a2d35      ← nav border / divider color
---accent:         #3ecf8e      ← teal green — primary action color, active states, highlights
---accent-dim:     #2a9d6a      ← darker teal for hover
---warn:           #f5a623      ← amber warning (⚠ icons, vacancy alerts)
---danger:         #e05252      ← red for negative deltas, errors
---body-bg:        #f5f6f8      ← light grey page background
---surface:        #ffffff      ← white cards, table backgrounds, modals
---border:         #e4e6eb      ← default border
---text-primary:   #1a1d23      ← main text
---text-secondary: #6b7280      ← secondary/label text
---text-muted:     #9ca3af      ← muted/placeholder text
-```
+### expiration.html — Expiration Management (complete)
+- Community → Bed Type accordion
+- Columns: Community/Unit Type, Adjustment Count, Rec Expiration,
+  Forecasted Expiration, Sum Delta, Max Delta
+- Expiration Detail modal: 24 months of rec/forecasted data
+- KPI slide-up panel: dual-axis bar chart + rent forecast line
 
-### Typography
-- Body font: `DM Sans` (weights 300, 400, 500, 600)
-- Monospace (unit IDs, codes): `DM Mono` (weights 400, 500)
-- Base font size: 13px
-- Table cell font size: 12.5px
-- Column headers: 11.5px, font-weight 600, color `--text-secondary`
+### term.html — Term Availability (complete)
+- Community → Bed Type accordion, 24 month columns (2-24)
+- Toggle cells ✓/✗ at bed type level
+- Propagation from community level
 
-### Layout
-- App shell: `display:flex; flex-direction:column; height:100vh; overflow:hidden`
-- Top nav height: 52px
-- Filter bar height: 44px
-- Sub-tab bar height: 44px
-- Remaining space: scrollable table area
+### term-premiums.html — Term Premiums (complete)
+- Same structure, editable % inputs per bed type
+- Blank cells where term unavailable
 
-### Key CSS classes
-- `.topnav` — dark top navigation bar
-- `.filter-bar` — dark filter row below nav
-- `.subtab-bar` — white sub-tab row with underline active indicator
-- `.data-table` — main data table (sticky header)
-- `.row-property` — top-level property row (bold, white bg)
-- `.row-bedtype` — bed type sub-row (indented 28px, slightly grey bg)
-- `.row-unit` — individual unit row (indented 44px, mono font ID)
-- `.expand-btn` — chevron toggle button for tree expansion
-- `.modal-backdrop` / `.modal` — modal overlay system
-- `.adv-drawer` — right-side advanced filters panel
-- `.exposure-panel` — slide-up chart panel at bottom
-- `.btn-primary` — teal filled button
-- `.btn-ghost` — outlined button
-- `.alert-icons` — row of teal icon buttons (bell, sort, lease, attributes)
-- `.avg-badge` — ⊘ average indicator on bed type rows
-- `.price-input` — inline borderless price input field
-- `.reason-input` — inline borderless reason text input
-- `.filter-select` — pill-shaped dark dropdown in filter bar
-- `.highlight-teal` — teal colored text (LT, Att. Value columns)
-- `.delta-neg` — red text for negative deltas
-- `.delta-pos` — teal text for positive deltas
+### concessions.html — Concession Management (complete)
+Three subtabs: Overview | Management
 
----
+Overview tab:
+- Community → Bed Type → Unit accordion
+- Windsor columns: % with concession, avg conc $, avg conc % rent, net eff rent
+- Market columns: Comp Offering, Comp Avg, Comp Net Eff, vs Market
+- Competitor breakdown modal (clickable market cells)
+- Concessions info modal (all levels stacked, linked to management)
 
-## Page structure (every page must have)
+Management tab:
+- Left navigator: Community → Bed Type → Unit tree
+- Right panel: current config (community/bedtype/unit level rows),
+  Add/Edit form with: value type ($/% /flat monthly/months free),
+  lease term multi-select, gross-up vs discount toggle,
+  eligibility (unit status, min vacancy days), exclusions,
+  stackable + priority, dates
+- Audit history: History button per row, expandable timeline
+- Automated concession parameters: vacancy days trigger,
+  target coverage %, default type/amount, max cap, auto-expire
 
-### 1. Top nav (.topnav)
-- Logo: diamond shape + "Windsor RMS" text
-- Nav tabs: Pricing | Expiration Management | Term Management | Concession Management | Rent Control
-- Divider + hamburger menu button (⋮⋮⋮) with dropdown: Parameters, Demand Forecast
-- Active tab gets `.active` class
+Data model:
+- Three levels: community / bedtype / unit
+- All stack automatically (community + bedtype + unit)
+- computeUnitConcessions() respects priority + stackable flag
+- Non-monthly concessions (Waived Fee, Gift Card etc.) excluded from Net Eff
 
-### 2. Filter bar (.filter-bar) — dark background, same on every page
-Dropdowns (in order):
-1. **State** — TX, FL, GA, NC, VA, AZ, CO
-2. **Metro Area** — cascades from State selection
-3. **Community** — cascades from State/Metro, uses `COMMUNITIES` array from data.js
-4. **Revenue Manager** — from `REVENUE_MANAGERS` in data.js
-5. **Community Director** — from `COMMUNITY_DIRECTORS` in data.js
+### rent-control.html — Rent Control (complete)
+Two subtabs: Overview | Management
 
-### 3. Sub-tab bar (.subtab-bar) — white, page-specific
-- Contains page-specific subtabs
-- Right side: Advanced filters button and/or Save button depending on page
+Overview tab:
+- Community → Bed Type → Unit accordion
+- RC Program badges: RS/RC/AB/S8/LI/AF/HA (real US programs)
+- Columns: Max Increase, Current Increase, vs Limit, 
+  Max Allowable Rent, Compliance, Next Filing, Notes
+- KPI cards: RC Units, Non-Compliant, At Limit, Communities Affected
 
----
+Management tab:
+- Left navigator: Community → Bed Type → Unit tree
+- Right panel: current config at each level + Assign/Edit form
+- Program dropdown with all RC types
+- Fields: reference/case #, reg date, filing date, 
+  custom max increase override, notes, bulk apply
+- Compliance summary with warning box for non-compliant units
+- recomputeUnitRC() and recomputeCommRC() maintain compliance
 
-## Data (data.js)
+### parameters.html — Parameters (complete)
+Left sidebar navigation:
+- Pricing: Optimization, Price Fluctuation, Hold Days, Renewals, Best Price
+- Alerts: Exposure Alerts (Prio 1/2), Comp Corridor (Max/Min),
+  Concession Alerts (Prio 1/2)
+- Compliance: Price Rounding (method + amount + preview),
+  Competitor Exclusions (per-community Competitor-Informed vs Blind Pricing)
+- History: date picker + 30/60/90 day shortcuts, read-only snapshot
 
-### Key arrays
-- `COMMUNITIES` — 12 Windsor communities with: `id, name, state, metro, rm (revenue manager), cd (community director)`
-- `PRICING_DATA` — extends COMMUNITIES with `totalUnits, availPct, bedTypes[]`
-- `bedTypes[]` — each has `type, totalUnits, availPct, units[], recRent, initialPrice, priorPeriodPrice, deltaInitial, deltaPrior`
-- `units[]` — each has `id, status (vacant/on notice/occupied), moveOut, availDate, priorRent, initialPrice, priorPeriodPrice, recRent, deltaInitial, deltaPrior, lt, attValue, netEffRent, concsAmt`
-- `TERM_DATA` — extends COMMUNITIES with `availability[24]` (bool array), `premiums[24]` (% array), `bedTypes[]`
-- `EXPIRATION_DATA` — extends COMMUNITIES with `months[12]` each having `month, count, pct, target`
-- `CONCESSION_DATA` — extends COMMUNITIES with `concessions[]`
-- `RENT_CONTROL_DATA` — filtered to VA/NC communities
+### demand.html — Placeholder only
 
-### Helper functions
-- `makeExposureData()` — returns 12-month exposure chart data
-- `makeCompData(baseRent)` — returns 12-month competitive position chart data
-- `CHART_MONTHS` — array of 12 month labels ('Jan 25' … 'Dec 25')
+## Key Data Files
 
----
+### data.js
+Contains all seed data:
+- COMMUNITIES: 12 Windsor communities with class A/B, 
+  yearBuilt, amenities, state, metro, rm, cd
+- PRICING_DATA: community → bedType → unit structure
+  Each unit has: id, recRent, status, rcStatus, alerts,
+  floorplan, area, floor, anchorPrice, priorRent, grossRent,
+  hasPriorConcession, daysOnMarket, attValue, moveOut, availDate
+- RENEWALS_DATA: occupied units with lease/renewal data
+- EXPIRATION_DATA: 24-month expiration forecasts
+- CONCESSIONS_DATA: three-level concession structure
+  with computeUnitConcessions() stacking logic
+- RENT_CONTROL_DATA: RC programs per community/bedtype/unit
+- PARAMETERS_DATA: per-community parameter settings
+- COMPETITOR_DATA: 3-5 competitors per community
+- RC_PROGRAM_TYPES: RS, RC, AB, S8, LI, AF, HA definitions
 
-## Pages still to build
+### styles.css
+All shared styles. Key variables:
+  --nav-bg: #1a1a2e
+  --accent: #e8007d
+  --border: #e8e8ed
+  --radius: 6px
+  Font: Inter (Google Fonts)
 
-### pricing-renewals.html
-Similar to pricing.html but for renewal leases. Same table structure, different data context. Show renewal offer, current rent, lease expiry date, recommended renewal rate, delta.
+## Design Principles
+- Target viewport: 1920px width, laptop height
+- No horizontal scroll on main table
+- Panels fixed at bottom (max-height 52vh)
+- All modals: min(95vw, Xpx) with max-height 85vh
+- Accordion: property → bed type → unit, all expandable
+- Class A badge: gold #f59e0b | Class B badge: slate #64748b
+- RC badges: RC=red, AF=amber, HA=blue
+- Status badges: Vacant=red/orange, On Notice=blue
 
-### expiration.html
-- Subtabs: none (single view)
-- Table: Communities × 12 months grid
-- Each cell shows expiration count and % of total leases
-- Color coding: green = at/below target, amber = slightly above, red = significantly above target
-- Right side: summary stats panel or bar chart showing total expirations by month
+## Workflow
+- Develop locally, preview via file:// in browser
+- Push to GitHub when ready: git add . && git commit -m "..." && git push origin main
+- GitHub Pages auto-deploys within ~30 seconds
 
-### term.html (Term Management — Availability)
-- Subtabs: "Lease term availability" (active) | "Lease term premiums"
-- Table: Communities × 24 month columns (1–24)
-- Each cell: ✓ (green, term available) or ✗ (red, term not available)
-- Expandable property rows to show bed types
-- Top right: Save button
-- Reference: `TERM_DATA[].availability[24]`
-
-### term-premiums.html (Term Management — Premiums)
-- Same structure as term.html but cells show editable % values (e.g. "50%", "35%")
-- Blank cells where term is not available
-- Cells are clickable/editable inline
-- Reference: `TERM_DATA[].premiums[24]`
-
-### concessions.html
-- Table of active and upcoming concessions by community
-- Columns: Community, Concession Type, Amount, Term, Start Date, End Date, Status (Active/Inactive), Actions
-- Ability to add new concession (opens modal similar to the one in pricing.html)
-- Filter by active/inactive
-
-### rent-control.html
-- Only shows communities in rent-controlled markets (VA, NC — filter from COMMUNITIES)
-- Columns: Community, State, Max Allowable Increase %, Current Applied Increase %, Status (Compliant/At Risk/Non-Compliant)
-- Status color coded: green = compliant, amber = at risk, red = non-compliant
-- Reference: `RENT_CONTROL_DATA`
-
-### parameters.html
-- Accessed via hamburger menu
-- Settings/configuration page
-- Sections: Pricing Parameters, Exposure Thresholds, Alert Thresholds, Term Settings
-- Form-based UI (not a table)
-
-### demand.html
-- Accessed via hamburger menu
-- Charts showing demand forecast by community/metro
-- Line chart: historical vs forecasted demand
-- Bar chart: leads by month
-- Use Chart.js, dark panel aesthetic similar to exposure panel in pricing.html
-
----
-
-## Modals (defined in pricing.html, reuse pattern on other pages)
-- **Lease Term modal** — table of 24 lease term lengths with price, concession amt, initial price
-- **Attributes modal** — unit area + apartment attributes + community attributes list
-- **Concession modal** — discount value, date aspects, period, display time range, term, toggle
-- All modals: close on backdrop click, close button top-right, Exit/Cancel + primary action buttons
-
----
-
-## Conventions & rules
-1. **Always load `data.js` before page scripts** — `<script src="data.js"></script>` in `<head>` or before closing `</body>`
-2. **Always load `styles.css`** — `<link rel="stylesheet" href="styles.css">`
-3. **Never duplicate nav/filter HTML** — copy the exact same block from pricing.html and update the `.active` class
-4. **Table headers must be sticky** — `position:sticky; top:0; z-index:10` already in styles.css
-5. **Use CSS variables** — never hardcode colors, always use `var(--accent)` etc.
-6. **Expand/collapse state** — store in JS Sets/objects, re-render table on toggle
-7. **No external dependencies** except Chart.js CDN and Google Fonts
-8. **File naming** — all lowercase, hyphenated (e.g. `rent-control.html`)
+## Ask RM Copilot
+- Floating "Ask RM" button (bottom right, pink)
+- General panel: portfolio-wide questions about exposure,
+  concessions, vacancy, YoY rent change
+- Row panel: opens from "+ Ask" on bed type or unit rows,
+  shows unit/bed type context with suggested questions
+- Rule-based answers computed from seed data (no API calls)
+- Implemented in pricing.html only currently

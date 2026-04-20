@@ -106,7 +106,7 @@
             <th style="width:80px;">Net Eff. <span class="th-sub">Rent</span></th>
             <th style="width:80px;">Concs. Amt</th>
             <th style="width:60px;">Notes</th>
-            <th style="width:48px;"></th>
+            <th style="width:32px;"></th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -429,40 +429,6 @@
         }
         .cp-pill:hover { border-color:var(--accent);color:#fff; }
 
-        /* General copilot */
-        .gcp-btn {
-          position:fixed;bottom:24px;right:24px;z-index:190;
-          background:var(--accent);color:#fff;border:none;
-          border-radius:20px;padding:10px 18px;font-size:13px;
-          font-weight:600;font-family:'Inter',sans-serif;
-          cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);
-          display:inline-flex;align-items:center;gap:6px;
-          transition:background .15s,transform .15s;
-        }
-        .gcp-btn:hover { background:var(--accent-dim);transform:translateY(-1px); }
-        .gcp {
-          position:fixed;bottom:72px;right:24px;width:380px;height:520px;
-          background:linear-gradient(180deg,#1a1d23 0%,#1e2128 100%);
-          border:1px solid #2a2d35;border-radius:12px;z-index:195;
-          display:none;flex-direction:column;overflow:hidden;
-          box-shadow:0 12px 48px rgba(0,0,0,.4);
-          transform:translateY(12px);opacity:0;
-          transition:transform .2s cubic-bezier(.4,0,.2,1),opacity .2s;
-        }
-        .gcp.open { display:flex;transform:translateY(0);opacity:1; }
-        .gcp.row-open { right:404px; }
-        .gcp-head {
-          display:flex;align-items:center;justify-content:space-between;
-          padding:14px 16px;border-bottom:1px solid #2a2d35;flex-shrink:0;
-        }
-        .gcp-title {
-          font-size:14px;font-weight:700;color:#fff;
-          display:flex;align-items:center;gap:6px;
-        }
-        .gcp-chat {
-          flex:1;overflow-y:auto;padding:12px 16px;
-          display:flex;flex-direction:column;gap:8px;
-        }
         .spk { color:var(--accent);font-size:14px; }
       </style>
     </div>
@@ -592,7 +558,7 @@
 </div>
 
 <!-- ── Availability Range Picker ── -->
-<div id="availRangePicker" class="avail-range-picker">
+<div id="availRangePicker" class="avail-range-picker" onclick="event.stopPropagation()">
   <div class="ar-calendars">
     <div class="ar-cal">
       <div class="ar-cal-header">
@@ -619,10 +585,7 @@
   </div>
   <div class="ar-footer">
     <span class="ar-range-text" id="arRangeText">Select start date</span>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-ghost" style="padding:5px 12px;font-size:11px;" onclick="clearAvailRange()">Clear</button>
-      <button class="btn btn-primary" style="padding:5px 12px;font-size:11px;" onclick="applyAvailRange()">Apply</button>
-    </div>
+    <button class="btn btn-ghost" style="padding:5px 12px;font-size:11px;" onclick="clearAvailRange()">Clear</button>
   </div>
 </div>
 
@@ -1046,16 +1009,27 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.ms-wrap') && !e.target.closest('.avail-range-picker')) {
     document.querySelectorAll('.ms-wrap').forEach(w => w.classList.remove('open'));
     const arp = document.getElementById('availRangePicker');
-    if (arp) arp.classList.remove('open');
+    if (arp && arp.classList.contains('open')) {
+      arp.classList.remove('open');
+      if (availPickingEnd) {
+        availPickingEnd = false;
+        availRangeStart = null;
+        availRangeEnd = null;
+        updateAvailBtnLabel();
+      }
+    }
   }
 });
 
 // ── Availability Date Range ──────────────────────────────
 let availRangeStart = null;
 let availRangeEnd = null;
+let availPickingEnd = false;
 let arYear, arMonth;
 
 function openAvailRange(btn) {
+  event.stopPropagation();
+  if (btn.dataset.clearClick) { delete btn.dataset.clearClick; return; }
   document.querySelectorAll('.ms-wrap').forEach(w => w.classList.remove('open'));
   const picker = document.getElementById('availRangePicker');
   if (picker.classList.contains('open')) { picker.classList.remove('open'); return; }
@@ -1066,6 +1040,7 @@ function openAvailRange(btn) {
   const now = new Date();
   arYear = now.getFullYear();
   arMonth = now.getMonth();
+  availPickingEnd = false;
   renderAvailRange();
   picker.classList.add('open');
 }
@@ -1082,7 +1057,7 @@ function renderAvailRange() {
   if (availRangeStart && availRangeEnd) {
     const s = availRangeStart, e = availRangeEnd;
     document.getElementById('arRangeText').textContent = smn[s.getMonth()] + ' ' + s.getDate() + ', ' + s.getFullYear() + ' \u2192 ' + smn[e.getMonth()] + ' ' + e.getDate() + ', ' + e.getFullYear();
-  } else if (availRangeStart) {
+  } else if (availPickingEnd && availRangeStart) {
     const s = availRangeStart;
     document.getElementById('arRangeText').textContent = smn[s.getMonth()] + ' ' + s.getDate() + ', ' + s.getFullYear() + ' \u2192 Select end date';
   } else {
@@ -1103,21 +1078,56 @@ function buildCalGrid(yr, mo) {
     if (availRangeStart && dt.getTime() === availRangeStart.getTime()) cls += ' range-start';
     if (availRangeEnd && dt.getTime() === availRangeEnd.getTime()) cls += ' range-end';
     if (availRangeStart && availRangeEnd && dt > availRangeStart && dt < availRangeEnd) cls += ' in-range';
-    html += `<span class="${cls}" onclick="pickAvailDay(${yr},${mo},${d})">${d}</span>`;
+    if (availPickingEnd && availRangeStart && !availRangeEnd && dt > availRangeStart) cls += ' pick-end-hint';
+    html += `<span class="${cls}" onclick="pickAvailDay(${yr},${mo},${d})"${availPickingEnd && !availRangeEnd ? ` onmouseover="hoverAvailDay(this,${yr},${mo},${d})" onmouseout="unhoverAvailDays()"` : ''}>${d}</span>`;
   }
   return html;
 }
 
+function hoverAvailDay(el, yr, mo, d) {
+  if (!availPickingEnd || !availRangeStart || availRangeEnd) return;
+  const hoverDt = new Date(yr, mo, d);
+  const startT = availRangeStart.getTime();
+  document.querySelectorAll('#arCal1 .ar-day, #arCal2 .ar-day').forEach(span => {
+    span.classList.remove('hover-range');
+    const onclick = span.getAttribute('onclick');
+    if (!onclick) return;
+    const m = onclick.match(/pickAvailDay\((\d+),(\d+),(\d+)\)/);
+    if (!m) return;
+    const cellDt = new Date(+m[1], +m[2], +m[3]);
+    const cellT = cellDt.getTime();
+    const lo = Math.min(startT, hoverDt.getTime());
+    const hi = Math.max(startT, hoverDt.getTime());
+    if (cellT > lo && cellT < hi) span.classList.add('hover-range');
+  });
+}
+
+function unhoverAvailDays() {
+  document.querySelectorAll('.hover-range').forEach(el => el.classList.remove('hover-range'));
+}
+
 function pickAvailDay(yr, mo, d) {
   const dt = new Date(yr, mo, d);
-  if (!availRangeStart || availRangeEnd) {
+  if (!availPickingEnd) {
     availRangeStart = dt;
     availRangeEnd = null;
+    availPickingEnd = true;
+    renderAvailRange();
+    updateAvailBtnLabel();
   } else {
-    if (dt < availRangeStart) { availRangeEnd = availRangeStart; availRangeStart = dt; }
-    else { availRangeEnd = dt; }
+    if (dt.getTime() === availRangeStart.getTime()) {
+      availRangeEnd = new Date(dt);
+    } else if (dt < availRangeStart) {
+      availRangeEnd = availRangeStart;
+      availRangeStart = dt;
+    } else {
+      availRangeEnd = dt;
+    }
+    availPickingEnd = false;
+    document.getElementById('availRangePicker').classList.remove('open');
+    updateAvailBtnLabel();
+    renderTable();
   }
-  renderAvailRange();
 }
 
 function arNav(dir) {
@@ -1127,19 +1137,44 @@ function arNav(dir) {
   renderAvailRange();
 }
 
-function applyAvailRange() {
-  document.getElementById('availRangePicker').classList.remove('open');
+function updateAvailBtnLabel() {
   const smn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const label = document.getElementById('availRangeLabel');
+  const btn = document.getElementById('availRangeBtn');
+  let clearEl = btn.querySelector('.avail-clear');
   if (availRangeStart && availRangeEnd) {
-    document.getElementById('availRangeLabel').textContent = smn[availRangeStart.getMonth()] + ' ' + availRangeStart.getDate() + ' \u2013 ' + smn[availRangeEnd.getMonth()] + ' ' + availRangeEnd.getDate();
+    const s = availRangeStart, e = availRangeEnd;
+    const sameDay = s.getTime() === e.getTime();
+    label.textContent = sameDay
+      ? smn[s.getMonth()] + ' ' + s.getDate()
+      : smn[s.getMonth()] + ' ' + s.getDate() + ' \u2013 ' + smn[e.getMonth()] + ' ' + e.getDate();
+    if (!clearEl) {
+      clearEl = document.createElement('span');
+      clearEl.className = 'avail-clear';
+      clearEl.textContent = '\u00d7';
+      clearEl.style.cssText = 'margin-left:6px;font-size:13px;font-weight:700;color:#9ca3af;cursor:pointer;line-height:1;padding:0 2px;';
+      clearEl.addEventListener('click', e2 => {
+        e2.stopPropagation();
+        btn.dataset.clearClick = '1';
+        clearAvailRange();
+      });
+      btn.appendChild(clearEl);
+    }
+  } else if (availPickingEnd && availRangeStart) {
+    const s = availRangeStart;
+    label.textContent = smn[s.getMonth()] + ' ' + s.getDate() + ' \u2013 \u2026';
+    if (clearEl) clearEl.remove();
+  } else {
+    label.textContent = 'Availability';
+    if (clearEl) clearEl.remove();
   }
-  renderTable();
 }
 
 function clearAvailRange() {
   availRangeStart = null;
   availRangeEnd = null;
-  document.getElementById('availRangeLabel').textContent = 'Availability';
+  availPickingEnd = false;
+  updateAvailBtnLabel();
   renderAvailRange();
   renderTable();
 }
@@ -1369,7 +1404,7 @@ function renderTable() {
           ${(()=>{const cc=typeof CONCESSIONS_DATA!=='undefined'?CONCESSIONS_DATA.find(c=>c.id===prop.id):null;const abc=[...(cc?.commConcessions??[]),...(cc?.bedTypes.find(b=>b.type===bt.type)?.btConcessions??[])].filter(c=>c.status==='Active');return abc.length>0?`<button onclick="openConcInfoModal('bedtype','${prop.id}','${bt.type}',null)" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:12px;font-weight:500;text-decoration:underline;text-underline-offset:2px;padding:0;">${abc.length} active</button>`:'<span style="color:var(--text-muted);font-size:12px;">\u2014</span>';})()}
         </td>
         <td>${noteCell(btKey, bt.note)}</td>
-        <td><button type="button" onclick="event.stopPropagation();openRowCopilot(null,'${prop.id}','${bt.type}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;">+ Ask</button></td>
+        <td><button type="button" onclick="event.stopPropagation();openRowCopilot(null,'${prop.id}','${bt.type}')" title="Ask RM about this bed type" style="background:none;border:none;cursor:pointer;padding:3px 4px;color:var(--text-muted);opacity:0.45;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;transition:opacity .15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.45'"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5.5"/><path d="M5.5 5.5a1.5 1.5 0 0 1 3 0c0 1-1.5 1.5-1.5 2.5"/><circle cx="7" cy="11" r=".6" fill="currentColor"/></svg></button></td>
       `;
       tb.appendChild(btr);
 
@@ -1447,7 +1482,7 @@ function renderTable() {
             ${(()=>{const cc=typeof CONCESSIONS_DATA!=='undefined'?CONCESSIONS_DATA.find(c=>c.id===prop.id):null;const cu=cc?.bedTypes.find(b=>b.type===bt.type)?.units.find(u=>u.id===unit.id);const tc=cu?.totalConcessionAmount??0;return tc>0?`<button onclick="openConcInfoModal('unit','${prop.id}','${bt.type}','${unit.id}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:500;text-decoration:underline;text-underline-offset:2px;padding:0;">$${tc}</button>`:'<span style="color:var(--text-muted);font-size:12px;">\u2014</span>';})()}
           </td>
           <td>${noteCell(unit.id, unit.note)}</td>
-          <td><button type="button" onclick="event.stopPropagation();openRowCopilot('${unit.id}','${prop.id}','${bt.type}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;">+ Ask</button></td>
+          <td><button type="button" onclick="event.stopPropagation();openRowCopilot('${unit.id}','${prop.id}','${bt.type}')" title="Ask RM about this unit" style="background:none;border:none;cursor:pointer;padding:3px 4px;color:var(--text-muted);opacity:0.45;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;transition:opacity .15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.45'"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5.5"/><path d="M5.5 5.5a1.5 1.5 0 0 1 3 0c0 1-1.5 1.5-1.5 2.5"/><circle cx="7" cy="11" r=".6" fill="currentColor"/></svg></button></td>
         `;
         tb.appendChild(utr);
       });
@@ -2466,24 +2501,6 @@ renderTable();
   </div>
 </aside>
 
-<!-- ── General Ask RM floating button + panel ── -->
-<button type="button" class="gcp-btn" id="gcpBtn" onclick="toggleGeneralCopilot()">
-  <span class="spk">✦</span> Ask RM
-</button>
-<aside class="gcp" id="gcpPanel" aria-hidden="true">
-  <div class="gcp-head">
-    <div class="gcp-title"><span class="spk">✦</span> RM Copilot</div>
-    <button id="gcpCloseBtn" style="background:#2a2e38;border:1px solid #4b5563;color:#fff;font-size:20px;font-weight:bold;cursor:pointer;padding:4px 8px;line-height:1;border-radius:50%;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;">×</button>
-  </div>
-  <div class="gcp-chat" id="gcpChat"></div>
-  <div class="gcp-suggest" id="gcpSuggest"></div>
-  <div class="gcp-input-wrap">
-    <input type="text" class="cp-input" id="gcpInput" placeholder="Ask a question..." onkeydown="if(event.key==='Enter'){generalCopilotSend();}"/>
-    <button type="button" class="cp-send" onclick="generalCopilotSend()" aria-label="Send">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h10M8 3l4 4-4 4"/></svg>
-    </button>
-  </div>
-</aside>
 
 <script>
 // ── Row Copilot ─────────────────────────────────────────────
@@ -2549,8 +2566,6 @@ function openRowCopilot(unitId, commId, bedType) {
   panel.style.display = '';
   panel.classList.add('open');
   panel.setAttribute('aria-hidden', 'false');
-  document.getElementById('gcpPanel').classList.add('row-open');
-
   renderRowCopilotSuggest();
 
   rowCopilotShowTyping();
@@ -2665,7 +2680,6 @@ function closeRowCopilot() {
   panel.style.display = 'none';
   panel.setAttribute('aria-hidden', 'true');
   _rowCopilotCtx = null;
-  document.getElementById('gcpPanel').classList.remove('row-open');
 }
 
 function _unitAnswer(q) {
@@ -2761,145 +2775,12 @@ function _unitAnswer(q) {
   return `I can help analyse ${ctx.unitId} in more detail. Try asking about vacancy, concessions, lease term recommendations, rent control limits, or how it compares to similar units.`;
 }
 
-// ── General Copilot ─────────────────────────────────────────
-const _gcpSuggestions = [
-  'Which communities have the highest exposure?',
-  'Where should I add concessions?',
-  'Which units have been vacant the longest?',
-  'What is the portfolio YoY rent change?',
-];
-let _gcpHistory = [];
-
-function toggleGeneralCopilot() {
-  const panel = document.getElementById('gcpPanel');
-  if (panel.classList.contains('open')) closeGeneralCopilot();
-  else openGeneralCopilot();
-}
-function openGeneralCopilot() {
-  const panel = document.getElementById('gcpPanel');
-  panel.style.display = '';
-  panel.classList.add('open');
-  panel.setAttribute('aria-hidden', 'false');
-  if (_gcpHistory.length === 0) {
-    gcpPush('asst', 'Hi! I can help you with pricing, exposure, concessions and rent trends across all Windsor communities. Ask me anything or click a unit row for specific analysis.');
-  }
-  renderGcpSuggest();
-  setTimeout(() => { const i = document.getElementById('gcpInput'); if (i) i.focus(); }, 220);
-}
-function closeGeneralCopilot() {
-  const panel = document.getElementById('gcpPanel');
-  panel.classList.remove('open');
-  panel.style.display = 'none';
-  panel.setAttribute('aria-hidden', 'true');
-}
-function renderGcpSuggest() {
-  document.getElementById('gcpSuggest').innerHTML = _gcpSuggestions.map(q =>
-    `<button type="button" class="cp-pill" onclick="gcpAskSuggest('${q.replace(/'/g, "\\'")}')">${q}</button>`
-  ).join('');
-}
-function gcpPush(role, text) {
-  _gcpHistory.push({ role, text });
-  const chat = document.getElementById('gcpChat');
-  const div = document.createElement('div');
-  div.className = 'cp-msg ' + (role === 'asst' ? 'cp-asst' : 'cp-user');
-  div.textContent = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-}
-function gcpShowTyping() {
-  const chat = document.getElementById('gcpChat');
-  const div = document.createElement('div');
-  div.className = 'cp-typing'; div.id = 'gcpTyping';
-  div.innerHTML = '<span></span><span></span><span></span>';
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-}
-function gcpHideTyping() {
-  const t = document.getElementById('gcpTyping');
-  if (t) t.remove();
-}
-function generalCopilotSend() {
-  const input = document.getElementById('gcpInput');
-  const q = (input.value || '').trim();
-  if (!q) return;
-  input.value = '';
-  gcpPush('user', q);
-  gcpShowTyping();
-  setTimeout(() => { gcpHideTyping(); gcpPush('asst', _generalAnswer(q)); }, 800);
-}
-function gcpAskSuggest(q) {
-  document.getElementById('gcpInput').value = q;
-  generalCopilotSend();
-}
-
-function _generalAnswer(q) {
-  const ql = q.toLowerCase();
-  const allComms = PRICING_DATA ?? [];
-  const allUnits = allComms.flatMap(c => c.bedTypes.flatMap(bt => bt.units ?? []));
-
-  if (/(exposure|vacant|availability|avail)/.test(ql)) {
-    const sorted = allComms
-      .map(c => ({ name: c.name, pct: parseFloat(c.availPct) }))
-      .filter(c => !isNaN(c.pct))
-      .sort((a, b) => b.pct - a.pct);
-    const top3 = sorted.slice(0, 3).map(c => `\u2022 ${c.name}: ${c.pct}% available`).join('\n');
-    const avg = sorted.length ? (sorted.reduce((s, c) => s + c.pct, 0) / sorted.length).toFixed(1) : '\u2014';
-    return `Portfolio average exposure: ${avg}%\n\nHighest exposure communities:\n${top3}`;
-  }
-
-  if (/(concession|conc|discount|incentive)/.test(ql)) {
-    const concData = typeof CONCESSIONS_DATA !== 'undefined' ? CONCESSIONS_DATA : [];
-    const noConc = allComms.filter(c => {
-      const cc = concData.find(x => x.id === c.id);
-      return !cc || (cc.commCoveragePct ?? 0) < 10;
-    });
-    const overConc = concData.filter(c => (c.commCoveragePct ?? 0) > 50).sort((a, b) => b.commCoveragePct - a.commCoveragePct);
-    let resp = '';
-    if (noConc.length > 0) {
-      resp += `Communities with low/no concession coverage (consider adding):\n`;
-      resp += noConc.slice(0, 3).map(c => `\u2022 ${c.name}`).join('\n') + '\n\n';
-    }
-    if (overConc.length > 0) {
-      resp += `Communities with high concession coverage (review effectiveness):\n`;
-      resp += overConc.slice(0, 3).map(c => `\u2022 ${c.name}: ${c.commCoveragePct}% coverage`).join('\n');
-    }
-    return resp || 'Concession coverage looks balanced across the portfolio.';
-  }
-
-  if (/(longest.*vacant|most.*vacant|vacant.*long|sitting)/.test(ql)) {
-    const sorted = allUnits
-      .filter(u => u.status === 'vacant' && (u.daysOnMarket ?? 0) > 0)
-      .sort((a, b) => (b.daysOnMarket ?? 0) - (a.daysOnMarket ?? 0))
-      .slice(0, 5);
-    if (sorted.length === 0) return 'No units flagged as long-term vacant right now.';
-    return `Units vacant the longest:\n` + sorted.map(u => `\u2022 ${u.id}: ${u.daysOnMarket} days`).join('\n');
-  }
-
-  if (/(yoy|year.over.year|rent change|rent growth)/.test(ql)) {
-    const withPrior = allUnits.filter(u => u.priorRent > 0 && u.recRent > 0);
-    if (withPrior.length === 0) return 'No prior lease data available.';
-    const avgYoY = withPrior.reduce((s, u) => s + ((u.recRent - u.priorRent) / u.priorRent * 100), 0) / withPrior.length;
-    const best = allComms.map(c => {
-      const units = c.bedTypes.flatMap(bt => bt.units ?? []).filter(u => u.priorRent > 0 && u.recRent > 0);
-      const avg = units.length ? units.reduce((s, u) => s + ((u.recRent - u.priorRent) / u.priorRent * 100), 0) / units.length : 0;
-      return { name: c.name, avg };
-    }).sort((a, b) => b.avg - a.avg);
-    return `Portfolio YoY net effective rent change: +${avgYoY.toFixed(1)}%\n\nTop communities by rent growth:\n`
-      + best.slice(0, 3).map(c => `\u2022 ${c.name}: +${c.avg.toFixed(1)}%`).join('\n');
-  }
-
-  return `I can help with portfolio exposure, concession strategy, vacancy analysis and rent trends. Try asking about specific communities or use one of the suggested questions.`;
-}
-
 // ── Wire close buttons ──────────────────────────────────────
 document.getElementById('rowCopilotCloseBtn').addEventListener('click', e => { e.stopPropagation(); closeRowCopilot(); });
-document.getElementById('gcpCloseBtn').addEventListener('click', e => { e.stopPropagation(); closeGeneralCopilot(); });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   const rp = document.getElementById('rowCopilotPanel');
   if (rp?.classList.contains('open')) closeRowCopilot();
-  const gp = document.getElementById('gcpPanel');
-  if (gp?.classList.contains('open')) closeGeneralCopilot();
 });
 </script>
 </body>

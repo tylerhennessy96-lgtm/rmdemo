@@ -343,6 +343,7 @@ html, body {
 .ar-day.range-start { border-radius: 50% 0 0 50%; }
 .ar-day.range-end { border-radius: 0 50% 50% 0; }
 .ar-day.in-range { background: rgba(62,207,142,0.15); border-radius: 0; }
+.ar-day.hover-range { background: rgba(232,0,125,0.12); border-radius: 0; }
 
 .ar-footer {
   display: flex;
