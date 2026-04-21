@@ -7,6 +7,46 @@
   <link rel="stylesheet" href="styles.css" />
   <script src="data.js"></script>
   <style>
+    /* ── Unit filter row (secondary, below global filter bar) ─ */
+    .rc-unit-filter-row {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .rc-unit-search {
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius);
+      padding: 6px 10px 6px 30px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12.5px;
+      color: var(--text-primary);
+      background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none' stroke='%239ca3af' stroke-width='1.5'%3E%3Ccircle cx='6' cy='6' r='4'/%3E%3Cline x1='9' y1='9' x2='12.5' y2='12.5'/%3E%3C/svg%3E") no-repeat 9px center;
+      width: 320px;
+      outline: none;
+    }
+    .rc-unit-search:focus { border-color: var(--accent); }
+    /* Community group header inside the unit dropdown. Renders against the
+       dark dropdown bg, so the muted-light text matches the option text tone. */
+    .ms-group-header {
+      padding: 7px 12px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      border-top: 1px solid #2a2d35;
+      pointer-events: none;
+    }
+    .ms-group-header:first-of-type { border-top: none; }
+
+    /* Visible-rule counter, shown next to Add Rule when a unit filter narrows */
+    .rc-counter { font-size: 12px; color: var(--text-muted); }
+    .rc-header-actions { display: flex; align-items: center; gap: 14px; }
+
     /* ── Page layout ─────────────────────────────────────── */
     .rc-page {
       flex: 1;
@@ -46,10 +86,27 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       overflow: hidden;
+      /* Single grid template shared by the header row and every rule row so
+         columns stay aligned even as content width varies between rows. */
+      --rc-grid: minmax(180px, 1.6fr) minmax(200px, 1.6fr) minmax(200px, 1.4fr) 104px 80px minmax(140px, 1fr) 190px 72px;
+    }
+    .rc-rule-header {
+      display: grid;
+      grid-template-columns: var(--rc-grid);
+      align-items: center;
+      gap: 18px;
+      padding: 11px 20px;
+      background: #fafbfc;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .04em;
     }
     .rc-rule-row {
       display: grid;
-      grid-template-columns: minmax(200px, 1.8fr) minmax(220px, 1.9fr) minmax(220px, 1.3fr) 110px 210px 72px;
+      grid-template-columns: var(--rc-grid);
       align-items: center;
       gap: 18px;
       padding: 14px 20px;
@@ -63,6 +120,9 @@
     .rc-max-formula  { font-size: 12.5px; font-weight: 600; color: var(--text-primary); line-height: 1.35; }
     .rc-max-current  { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; font-weight: 400; }
     .rc-timeframe { font-size: 12.5px; color: var(--text-secondary); }
+    .rc-notice { font-size: 12.5px; color: var(--text-secondary); }
+    .rc-protections { font-size: 12.5px; color: var(--text-secondary); line-height: 1.4; }
+    .rc-protections-empty { color: var(--text-muted); }
     .rc-active { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
     .rc-active .rc-indefinite { color: var(--text-muted); font-style: italic; }
     .rc-actions { display: flex; gap: 6px; justify-content: flex-end; }
@@ -329,16 +389,35 @@
 
   <div class="filter-bar" id="filterBar"></div>
 
+  <div class="rc-unit-filter-row">
+    <input type="search" id="unitSearch" class="rc-unit-search"
+           placeholder="Find unit by ID (e.g. WCC-004-2Bed-002)"
+           oninput="onUnitSearchInput()">
+    <div class="ms-wrap" id="ms-unit">
+      <button class="ms-trigger" onclick="toggleMs('unit')" data-default="All Units">
+        <span class="ms-label">All Units</span>
+        <svg viewBox="0 0 10 6" width="10" height="6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l4 4 4-4"/></svg>
+      </button>
+      <div class="ms-dropdown">
+        <div class="ms-search"><input type="text" placeholder="Search units..." oninput="filterMsOptions('unit',this.value)"></div>
+        <div class="ms-options" id="unitMsOptions"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="rc-page">
     <div class="rc-header">
       <div>
         <h1 class="rc-title">Rent Control</h1>
         <div class="rc-subtitle">Configure rent increase rules that the pricing engine respects.</div>
       </div>
-      <button class="rc-add-btn" onclick="openRuleModal()">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="6" y1="2" x2="6" y2="10"/><line x1="2" y1="6" x2="10" y2="6"/></svg>
-        Add Rule
-      </button>
+      <div class="rc-header-actions">
+        <span class="rc-counter" id="ruleCounter" style="display:none;"></span>
+        <button class="rc-add-btn" onclick="openRuleModal()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="6" y1="2" x2="6" y2="10"/><line x1="2" y1="6" x2="10" y2="6"/></svg>
+          Add Rule
+        </button>
+      </div>
     </div>
 
     <div id="ruleList"></div>
@@ -589,12 +668,19 @@ function onMsChange(id) {
   else ac.checked = false;
   updateMsLabel(id);
   updateClearBtn();
+  // Cascade: the unit multi-select's option list depends on which communities
+  // are in scope, so global community-affecting filters must rebuild it.
+  if (['state','metro','community','rm','cd'].includes(id)) rebuildUnitDropdown();
   renderRuleList();
 }
 function getMsValues(id) {
   const w = document.getElementById('ms-' + id);
   if (!w) return [];
-  if (w.querySelector('.ms-all input').checked) return [];
+  // The "All" row is injected dynamically for some wraps (e.g. the unit
+  // multi-select, which cascades off the community filter). If the wrap
+  // exists but its options haven't been built yet, treat it as "All".
+  const allCb = w.querySelector('.ms-all input');
+  if (!allCb || allCb.checked) return [];
   return [...w.querySelectorAll('.ms-option:not(.ms-all) input:checked')].map(c => c.value);
 }
 function updateMsLabel(id) {
@@ -637,8 +723,23 @@ function clearAllFilters() {
     updateMsLabel(id);
   });
   updateClearBtn();
+  rebuildUnitDropdown();
   renderRuleList();
 }
+
+// Resets just the unit search + unit multi-select. Leaves global filters alone.
+function clearUnitFilters() {
+  document.getElementById('unitSearch').value = '';
+  const w = document.getElementById('ms-unit');
+  if (w) {
+    w.querySelectorAll('.ms-options input').forEach(cb => cb.checked = false);
+    const allCb = w.querySelector('input[value="__all__"]');
+    if (allCb) allCb.checked = true;
+    updateMsLabel('unit');
+  }
+  renderRuleList();
+}
+function onUnitSearchInput() { renderRuleList(); }
 function updateClearBtn() {
   const hasFilters = ['state','metro','community','rm','cd'].some(id => getMsValues(id).length > 0);
   const btn = document.getElementById('clearFiltersBtn');
@@ -672,6 +773,115 @@ function getFilteredRules() {
     if (r.scope.communityIds === 'all') return true;
     return r.scope.communityIds.some(id => allowed.has(id));
   });
+}
+
+// ── Unit-level filter (search + multi-select) ────────────
+
+// Flat lookup of every unit in PRICING_DATA keyed by unit id.
+const UNIT_INDEX = (() => {
+  const idx = {};
+  PRICING_DATA.forEach(comm => {
+    comm.bedTypes.forEach(bt => {
+      bt.units.forEach(u => { idx[u.id] = { id: u.id, commId: comm.id, commName: comm.name, bedType: bt.type }; });
+    });
+  });
+  return idx;
+})();
+
+// Does a rule's *scope* cover a specific (comm, bed type, unit) triple?
+// Mirrors the scope-matching half of getActiveRcRulesForUnit — no active-date
+// check, because the rule list shows rules regardless of their active window.
+function ruleCoversUnit(rule, commId, bedType, unitId) {
+  const s = rule.scope;
+  if (s.communityIds !== 'all' && !s.communityIds.includes(commId)) return false;
+  if (s.bedTypes     !== 'all' && !s.bedTypes.includes(bedType))    return false;
+  if (s.unitIds      !== 'all' && !s.unitIds.includes(unitId))      return false;
+  return true;
+}
+
+// Returns the set of target unit IDs derived from the search input and the
+// unit multi-select. Returns null when no unit filter is active.
+function getUnitFilterTargets() {
+  const search = document.getElementById('unitSearch')?.value.trim().toLowerCase() ?? '';
+  const selected = getMsValues('unit');
+  if (!search && !selected.length) return null;
+  const targets = new Set();
+  if (search) {
+    Object.values(UNIT_INDEX).forEach(u => {
+      if (u.id.toLowerCase().includes(search)) targets.add(u.id);
+    });
+  }
+  selected.forEach(id => targets.add(id));
+  return targets;
+}
+
+// The final rule list: globally filtered rules, then narrowed further by unit
+// targets when a unit filter is active.
+function getVisibleRules() {
+  const base = getFilteredRules();
+  const targets = getUnitFilterTargets();
+  if (!targets) return base;
+  return base.filter(r => {
+    for (const uid of targets) {
+      const u = UNIT_INDEX[uid];
+      if (u && ruleCoversUnit(r, u.commId, u.bedType, u.id)) return true;
+    }
+    return false;
+  });
+}
+
+function isUnitFilterActive() {
+  const s = document.getElementById('unitSearch')?.value.trim() ?? '';
+  return s.length > 0 || getMsValues('unit').length > 0;
+}
+
+// Builds the unit multi-select dropdown content. Cascades off the global
+// community filter — only units whose parent community survives the global
+// filters appear. Units are grouped by community with a small header above
+// each group. Previously-checked values that survive the narrowing stay
+// checked; ones that got pruned are dropped silently.
+function rebuildUnitDropdown() {
+  const options = document.getElementById('unitMsOptions');
+  if (!options) return;
+
+  const prev = new Set(getMsValues('unit'));
+  const allowedCommIds = new Set(getFilteredCommunityIds());
+
+  // Group units by community, preserving PRICING_DATA order.
+  const groups = [];
+  PRICING_DATA.forEach(comm => {
+    if (!allowedCommIds.has(comm.id)) return;
+    const bucket = { commName: comm.name, units: [] };
+    comm.bedTypes.forEach(bt => bt.units.forEach(u => bucket.units.push(u.id)));
+    if (bucket.units.length) groups.push(bucket);
+  });
+
+  const allIds = new Set(groups.flatMap(g => g.units));
+  const stillChecked = [...prev].filter(id => allIds.has(id));
+  const allActive = stillChecked.length === 0;
+
+  let html = `<label class="ms-option ms-all"><input type="checkbox" value="__all__" ${allActive ? 'checked' : ''} onchange="toggleMsAll('unit',this)"> All</label>`;
+  groups.forEach(g => {
+    html += `<div class="ms-group-header">${escapeHtml(g.commName)}</div>`;
+    g.units.forEach(uid => {
+      const checked = !allActive && stillChecked.includes(uid);
+      html += `<label class="ms-option"><input type="checkbox" value="${uid}" ${checked ? 'checked' : ''} onchange="onMsChange('unit')"> ${uid}</label>`;
+    });
+  });
+  options.innerHTML = html;
+  updateMsLabel('unit');
+}
+
+function updateRuleCounter(visible, total) {
+  const el = document.getElementById('ruleCounter');
+  if (!el) return;
+  if (isUnitFilterActive()) {
+    el.textContent = `Showing ${visible} of ${total} rules`;
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+    el.textContent = '';
+  }
 }
 
 // ── Scope summary ────────────────────────────────────────
@@ -796,6 +1006,7 @@ function renderRuleList() {
   const container = document.getElementById('ruleList');
 
   if (!RENT_CONTROL_RULES.length) {
+    updateRuleCounter(0, 0);
     container.innerHTML = `
       <div class="rc-rule-list">
         <div class="rc-empty">
@@ -810,16 +1021,30 @@ function renderRuleList() {
     return;
   }
 
-  const visibleRules = getFilteredRules();
+  const visibleRules = getVisibleRules();
+  updateRuleCounter(visibleRules.length, RENT_CONTROL_RULES.length);
+
   if (!visibleRules.length) {
-    container.innerHTML = `
-      <div class="rc-rule-list">
-        <div class="rc-empty">
-          <div class="rc-empty-title">No rent control rules match the current filters</div>
-          <div class="rc-empty-desc">Try clearing filters or widening the community scope.</div>
-          <button class="btn btn-ghost" onclick="clearAllFilters()">Clear filters</button>
-        </div>
-      </div>`;
+    // Two distinct empty states: unit-filter-driven vs global-filter-driven.
+    // The unit one offers a partial reset that preserves the global context.
+    if (isUnitFilterActive()) {
+      container.innerHTML = `
+        <div class="rc-rule-list">
+          <div class="rc-empty">
+            <div class="rc-empty-title">No rent control rules apply to the specified unit(s).</div>
+            <button class="btn btn-ghost" onclick="clearUnitFilters()">Clear unit filters</button>
+          </div>
+        </div>`;
+    } else {
+      container.innerHTML = `
+        <div class="rc-rule-list">
+          <div class="rc-empty">
+            <div class="rc-empty-title">No rent control rules match the current filters</div>
+            <div class="rc-empty-desc">Try clearing filters or widening the community scope.</div>
+            <button class="btn btn-ghost" onclick="clearAllFilters()">Clear filters</button>
+          </div>
+        </div>`;
+    }
     return;
   }
 
@@ -831,12 +1056,31 @@ function renderRuleList() {
         <div class="rc-max-formula">${escapeHtml(formulaText)}</div>
         ${showCurrent ? `<div class="rc-max-current">Currently: ${escapeHtml(formatEffectiveCap(rule.formula, rule.ceiling, CURRENT_CPI))}</div>` : ''}
       </div>`;
+
+    const noticeDays = rule.noticePeriodDays ?? 30;
+    const noticeCell = `<div class="rc-notice">${noticeDays} days</div>`;
+
+    // Compact inline list of enabled protections, middot-separated. Matches
+    // the order in the edit modal: first-year → vacancy → banking.
+    const protections = [];
+    if (rule.firstYearProtection) protections.push('1st yr');
+    if (rule.vacancyDecontrol === 'full')  protections.push('Vac. decontrol');
+    if (rule.vacancyDecontrol === 'bonus') protections.push('Vac. bonus');
+    if (rule.bankingAllowed)      protections.push('Banking');
+    const protectionsCell = `<div class="rc-protections">${
+      protections.length
+        ? escapeHtml(protections.join(' · '))
+        : '<span class="rc-protections-empty">—</span>'
+    }</div>`;
+
     return `
     <div class="rc-rule-row">
       <div class="rc-name">${escapeHtml(rule.name)}</div>
       <div class="rc-scope">${escapeHtml(computeScopeSummary(rule.scope))}</div>
       ${maxCell}
       <div class="rc-timeframe">${TIMEFRAME_LABEL[rule.timeframe] ?? rule.timeframe}</div>
+      ${noticeCell}
+      ${protectionsCell}
       <div class="rc-active">${formatActiveRange(rule)}</div>
       <div class="rc-actions">
         <button class="rc-icon-btn" onclick="openRuleModal('${rule.id}')" title="Edit">
@@ -850,7 +1094,19 @@ function renderRuleList() {
   `;
   }).join('');
 
-  container.innerHTML = `<div class="rc-rule-list">${rows}</div>`;
+  const header = `
+    <div class="rc-rule-header">
+      <div>Rule Name</div>
+      <div>Scope</div>
+      <div>Max Increase</div>
+      <div>Timeframe</div>
+      <div>Notice</div>
+      <div>Protections</div>
+      <div>Active</div>
+      <div></div>
+    </div>`;
+
+  container.innerHTML = `<div class="rc-rule-list">${header}${rows}</div>`;
 }
 
 function escapeHtml(s) {
@@ -1305,6 +1561,7 @@ function deleteRule(ruleId) {
 
 // ── Init ─────────────────────────────────────────────────
 populateFilters();
+rebuildUnitDropdown();
 renderRuleList();
 </script>
 </body>
