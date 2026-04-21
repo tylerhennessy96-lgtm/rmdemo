@@ -574,3 +574,187 @@ function makePricingData(baseRent) {
     };
   });
 }
+
+// ── Lease History ─────────────────────────────────────────
+// Unit-level lease ledger: new leases, renewals, move-ins, move-outs.
+const LEASE_EVENT_META = {
+  new_lease_signed: { label: 'New Lease' },
+  renewal_signed:   { label: 'Renewal' },
+  move_in:          { label: 'Move-in' },
+  move_out:         { label: 'Move-out' },
+};
+
+const LEASE_EVENT_STYLE = {
+  new_lease_signed: { bg:'#fce7f3', fg:'#b91c6d' },  // pink family (accent tint)
+  renewal_signed:   { bg:'#dbeafe', fg:'#1e40af' },  // blue family
+  move_in:          { bg:'#dcfce7', fg:'#166534' },  // green family
+  move_out:         { bg:'#e2e8f0', fg:'#475569' },  // slate/grey family
+};
+
+const LEASE_RESIDENT_NAMES = [
+  'J. Martinez','S. Chen','R. Patel','M. Kim','A. Thompson',
+  'L. Rodriguez','D. Okafor','E. Nguyen','K. Brown','C. Wilson',
+  'T. Garcia','P. Singh','N. Ivanov','H. Yamamoto','B. Johnson',
+  'F. Ortiz','G. Adebayo','V. Popescu','O. Osei','W. Lee',
+  'Y. Abdi','Q. Zhao','J. Davis','S. Rashid','K. Fischer',
+  'L. Park','A. Ramirez','M. Dubois','T. Ali','E. Schultz',
+  'R. Mendez','B. Webber','C. Jensen','A. Malik','J. Cooper',
+  'N. Ahmad','L. Ortega','P. Svensson','D. Hernandez','M. O’Brien',
+];
+
+const LEASE_HISTORY_DATA = (function() {
+  // Seeded PRNG (mulberry32) for stable output across reloads
+  let s = 0x7e23a9bf;
+  const rng = () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const roundTen = n => Math.round(n / 10) * 10;
+
+  // Pre-index each unit's current RC program code (if any). We don't model
+  // historical RC changes, so events use today's assignment as a proxy for
+  // "at time of event" — fine for a 90-day POC window.
+  const rcByUnit = {};
+  RENT_CONTROL_DATA.forEach(c => {
+    c.allUnits.forEach(u => {
+      rcByUnit[u.id] = u.effectiveProgram ? u.effectiveProgram.code : null;
+    });
+  });
+
+  // Weight each unit by community size so larger properties get more events.
+  const unitPool = [];
+  PRICING_DATA.forEach(comm => {
+    const weight = Math.max(1, Math.round(comm.totalUnits / 20));
+    comm.bedTypes.forEach(bt => {
+      bt.units.forEach(u => {
+        for (let k = 0; k < weight; k++) {
+          unitPool.push({
+            commId: comm.id, unitId: u.id, bedType: bt.type,
+            rm: comm.rm, commClass: comm.class,
+          });
+        }
+      });
+    });
+  });
+
+  const MIX = [
+    ['new_lease_signed', 42],
+    ['renewal_signed',   42],
+    ['move_in',          18],
+    ['move_out',         18],
+  ];
+
+  const todayMs = Date.parse('2026-04-21T12:00:00Z');
+  const DAY_MS  = 86400000;
+  const LEASE_TERMS = [6, 9, 10, 12, 13, 14, 15];
+
+  // Concession pool: mostly "1 mo free" / "$500 flat" / "$1,000 flat",
+  // with ~1/3 of leases running at None.
+  const CONC_POOL = [
+    { type:'Free Period',  amount:1,    description:'1 mo free'         },
+    { type:'Free Period',  amount:1,    description:'1 mo free'         },
+    { type:'Free Period',  amount:1,    description:'1 mo free'         },
+    { type:'Flat Monthly', amount:500,  description:'$500 flat'         },
+    { type:'Flat Monthly', amount:500,  description:'$500 flat'         },
+    { type:'Flat Monthly', amount:1000, description:'$1,000 flat'       },
+    null, null, null, // "None"
+  ];
+
+  // Class A: $2,000–$3,200; Class B: $1,600–$2,400. Bed-type graded so
+  // larger units skew high within each band.
+  function grossRentFor(commClass, bedType) {
+    const [lo, hi] = commClass === 'A' ? [2000, 3200] : [1600, 2400];
+    const bedFrac  = bedType === '1 Bed' ? 0.15 : bedType === '2 Bed' ? 0.5 : 0.85;
+    const center   = lo + bedFrac * (hi - lo);
+    const jitter   = (rng() - 0.5) * (hi - lo) * 0.25;
+    return roundTen(Math.min(hi, Math.max(lo, center + jitter)));
+  }
+
+  function netEffFor(gross, term, conc) {
+    if (!conc) return gross;
+    if (conc.type === 'Free Period')  return roundTen(gross * (term - conc.amount) / term);
+    if (conc.type === 'Flat Monthly') return gross - conc.amount;
+    return gross;
+  }
+
+  // All event dates land at UTC noon to keep calendar-day identity stable
+  // across timezones when formatted.
+  function dateAtUTCNoon(ms) {
+    const d = new Date(ms);
+    d.setUTCHours(12, 0, 0, 0);
+    return d;
+  }
+  function addDays(d, days) {
+    const out = new Date(d);
+    out.setUTCDate(out.getUTCDate() + days);
+    return out;
+  }
+  function addMonths(d, months) {
+    const out = new Date(d);
+    out.setUTCMonth(out.getUTCMonth() + months);
+    return out;
+  }
+  const iso = d => d.toISOString();
+
+  const events = [];
+  let seq = 0;
+  MIX.forEach(([type, count]) => {
+    for (let i = 0; i < count; i++) {
+      const u = unitPool[Math.floor(rng() * unitPool.length)];
+      const dayBack = Math.floor(rng() * 90);
+      const evDate  = dateAtUTCNoon(todayMs - dayBack * DAY_MS);
+      seq++;
+      const resident = LEASE_RESIDENT_NAMES[Math.floor(rng() * LEASE_RESIDENT_NAMES.length)];
+
+      const ev = {
+        id: 'LHE-' + String(seq).padStart(4, '0'),
+        eventDate: iso(evDate),
+        moveInDate: null,
+        moveOutDate: null,
+        renewalEffectiveDate: null,
+        communityId: u.commId,
+        unitId: u.unitId,
+        bedType: u.bedType,
+        eventType: type,
+        resident, user: u.rm,
+        leaseTerm: null, grossRent: null, concession: null, netEffRent: null, rcProgram: null,
+      };
+
+      if (type === 'new_lease_signed') {
+        const term  = LEASE_TERMS[Math.floor(rng() * LEASE_TERMS.length)];
+        const gross = grossRentFor(u.commClass, u.bedType);
+        const conc  = CONC_POOL[Math.floor(rng() * CONC_POOL.length)];
+        ev.leaseTerm  = term;
+        ev.grossRent  = gross;
+        ev.concession = conc;
+        ev.netEffRent = netEffFor(gross, term, conc);
+        ev.rcProgram  = rcByUnit[u.unitId] || null;
+        ev.moveInDate  = iso(addDays(evDate, Math.floor(rng() * 22)));    // 0–21 days after signing
+        ev.moveOutDate = iso(addMonths(evDate, term));                    // signing + term
+      } else if (type === 'renewal_signed') {
+        const term  = LEASE_TERMS[Math.floor(rng() * LEASE_TERMS.length)];
+        const gross = grossRentFor(u.commClass, u.bedType);
+        const conc  = CONC_POOL[Math.floor(rng() * CONC_POOL.length)];
+        ev.leaseTerm  = term;
+        ev.grossRent  = gross;
+        ev.concession = conc;
+        ev.netEffRent = netEffFor(gross, term, conc);
+        ev.rcProgram  = rcByUnit[u.unitId] || null;
+        const rEff = addDays(evDate, Math.floor(rng() * 61));             // 0–60 days after signing
+        ev.renewalEffectiveDate = iso(rEff);
+        ev.moveOutDate = iso(addMonths(rEff, term));                      // renewal effective + term
+      } else if (type === 'move_in') {
+        ev.moveInDate = ev.eventDate;
+      } else if (type === 'move_out') {
+        ev.moveOutDate = ev.eventDate;
+      }
+
+      events.push(ev);
+    }
+  });
+
+  events.sort((a, b) => b.eventDate.localeCompare(a.eventDate));
+  return events;
+})();
