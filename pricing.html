@@ -206,7 +206,7 @@
     </div>
 
     <!-- Advanced Filters Drawer -->
-    <div class="adv-drawer" id="advDrawer">
+    <div class="adv-drawer adv-drawer-tall" id="advDrawer">
       <div class="adv-drawer-header">
         <span class="adv-drawer-title">Advanced filters</span>
         <button class="adv-close" onclick="toggleAdvDrawer()">
@@ -214,6 +214,7 @@
         </button>
       </div>
 
+      <div class="adv-drawer-body">
       <div class="adv-section">
         <div class="adv-section-title">Unit ID</div>
         <input type="text" id="unitIdSearch" placeholder="Search or paste unit ID..." oninput="renderTable()" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:7px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--text-primary);background:var(--surface);outline:none;">
@@ -297,6 +298,7 @@
       <div class="adv-section">
         <div class="adv-section-title">Manual Adjustment</div>
         <select class="adv-full-select"><option value="">Select</option><option>Has adjustment</option><option>No adjustment</option></select>
+      </div>
       </div>
 
       <div class="adv-footer">

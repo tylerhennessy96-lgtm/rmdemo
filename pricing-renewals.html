@@ -88,13 +88,14 @@
     </div>
 
     <!-- Advanced Filters Drawer -->
-    <div class="adv-drawer" id="advDrawer">
+    <div class="adv-drawer adv-drawer-tall" id="advDrawer">
       <div class="adv-drawer-header">
         <span class="adv-drawer-title">Advanced filters</span>
         <button class="adv-close" onclick="toggleAdvDrawer()">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
         </button>
       </div>
+      <div class="adv-drawer-body">
       <div class="adv-section" id="statusFilters">
         <div class="adv-section-title">Renewal Status</div>
         <label class="ms-option"><input type="checkbox" value="Pending" onchange="renderRenewalsTable()">Pending</label>
@@ -102,6 +103,7 @@
         <label class="ms-option"><input type="checkbox" value="Accepted" onchange="renderRenewalsTable()">Accepted</label>
         <label class="ms-option"><input type="checkbox" value="Declined" onchange="renderRenewalsTable()">Declined</label>
         <label class="ms-option"><input type="checkbox" value="Negotiating" onchange="renderRenewalsTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:rgba(167,139,250,0.2);color:#6d28d9;font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">Negotiating</span></span></label>
+      </div>
       </div>
       <div class="adv-footer">
         <button class="btn-apply" onclick="renderRenewalsTable();toggleAdvDrawer()">Apply</button>

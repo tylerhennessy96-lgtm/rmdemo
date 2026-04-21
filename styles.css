@@ -866,18 +866,36 @@ table.modal-table .info-icon {
   position: absolute;
   top: 0;
   right: 0;
-  bottom: 0;
-  width: 280px;
+  bottom: 20px;            /* small gap above viewport bottom */
+  width: 420px;
   background: var(--surface);
   border-left: 1px solid var(--border);
   box-shadow: var(--shadow-md);
   display: none;
   flex-direction: column;
   z-index: 50;
-  overflow-y: auto;
+  overflow: hidden;        /* scroll happens in .adv-drawer-body */
+}
+
+/* Modifier for pages whose drawer should visually overlap the legend strip
+   and KPI stats strip (pricing.html, pricing-renewals.html). Positions the
+   drawer against the viewport so its top sits at the bottom of the subtab
+   bar (topnav 48 + filter-bar 44 + subtab-bar 44 = 136px). */
+.adv-drawer.adv-drawer-tall {
+  position: fixed;
+  top: 136px;
+  right: 0;
+  bottom: 20px;
 }
 
 .adv-drawer.open { display: flex; }
+
+/* Scrollable section wrapper between the sticky header and footer. Host
+   pages wrap their existing .adv-section list in this div. */
+.adv-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+}
 
 .adv-drawer-header {
   display: flex;
@@ -885,9 +903,8 @@ table.modal-table .info-icon {
   justify-content: space-between;
   padding: 16px 18px;
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
   background: var(--surface);
+  flex-shrink: 0;
 }
 
 .adv-drawer-title { font-size: 14px; font-weight: 600; }
@@ -955,10 +972,9 @@ table.modal-table .info-icon {
 
 .adv-footer {
   padding: 14px 18px;
-  position: sticky;
-  bottom: 0;
   background: var(--surface);
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .btn-apply {
