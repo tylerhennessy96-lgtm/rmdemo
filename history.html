@@ -75,17 +75,6 @@
       white-space: nowrap;
     }
 
-    /* RC program badge — colours come inline from RC_PROGRAM_TYPES */
-    .rc-pill {
-      display: inline-block;
-      font-size: 9.5px;
-      font-weight: 700;
-      letter-spacing: .04em;
-      border-radius: 4px;
-      padding: 2px 6px;
-      white-space: nowrap;
-    }
-
     /* Community class badge */
     .class-badge {
       display: inline-block;
@@ -392,11 +381,6 @@ const TODAY = new Date('2026-04-21T23:59:59');
 const DAY_MS = 86400000;
 const COMMUNITY_BY_ID = {}; COMMUNITIES.forEach(c => { COMMUNITY_BY_ID[c.id] = c; });
 
-// RC program style lookup — reuses the exact colours defined in RC_PROGRAM_TYPES
-// (same badges used on rent-control.html)
-const RC_STYLE_BY_CODE = {};
-RC_PROGRAM_TYPES.forEach(p => { RC_STYLE_BY_CODE[p.code] = { color: p.color, bg: p.bg, label: p.label }; });
-
 const EVENT_TYPE_ORDER = ['new_lease_signed', 'renewal_signed', 'move_in', 'move_out'];
 
 // ── State ────────────────────────────────────────────────
@@ -582,13 +566,6 @@ function eventPill(type) {
   const st   = LEASE_EVENT_STYLE[type];
   return `<span class="evt-pill" style="background:${st.bg};color:${st.fg};">${meta.label}</span>`;
 }
-// rcProgram is stored as a code string ('AF', 'RC', etc.) in the seed.
-function rcPill(code) {
-  if (!code) return '';
-  const st = RC_STYLE_BY_CODE[code];
-  if (!st) return '';
-  return `<span class="rc-pill" style="background:${st.bg};color:${st.color};" title="${st.label}">${code}</span>`;
-}
 function communityBadge(comm) {
   return `${comm.name}<span class="class-badge class-${comm.class}">${comm.class}</span>`;
 }
@@ -645,13 +622,12 @@ function renderFeed() {
         <td class="feed-mono">${leaseOrBlank(ev, () => fmtUSD(ev.grossRent))}</td>
         <td>${concessionText(ev)}</td>
         <td class="feed-mono">${leaseOrBlank(ev, () => fmtUSD(ev.netEffRent))}</td>
-        <td>${rcPill(ev.rcProgram)}</td>
         <td class="feed-resident">${ev.resident}</td>
         <td class="feed-user">${ev.user}</td>
       </tr>`;
   }).join('');
 
-  // 14 columns. All four date columns share the same 104px width so the
+  // 13 columns. All four date columns share the same 104px width so the
   // compact "20 Apr 2026" format never truncates and the four columns look
   // visually consistent. Resident absorbs slack at 1920px.
   wrap.innerHTML = `
@@ -668,7 +644,6 @@ function renderFeed() {
         <col style="width:82px;">   <!-- Gross Rent -->
         <col style="width:120px;">  <!-- Concession -->
         <col style="width:82px;">   <!-- Net Eff. -->
-        <col style="width:54px;">   <!-- RC -->
         <col>                       <!-- Resident (flex, truncate) -->
         <col style="width:110px;">  <!-- User -->
       </colgroup>
@@ -685,7 +660,6 @@ function renderFeed() {
           <th>Gross Rent</th>
           <th>Concession</th>
           <th>Net Eff.</th>
-          <th>RC</th>
           <th>Resident</th>
           <th>User</th>
         </tr>
@@ -726,14 +700,6 @@ function openUnitTimeline(unitId) {
     }
   }
 
-  // Resolve unit's current RC program code from RENT_CONTROL_DATA
-  let currentRC = null;
-  const commRC = RENT_CONTROL_DATA.find(c => c.id === first.communityId);
-  if (commRC) {
-    const u = commRC.allUnits.find(x => x.id === unitId);
-    if (u && u.effectiveProgram) currentRC = u.effectiveProgram.code;
-  }
-
   document.getElementById('timelineTitle').textContent = unitId;
   document.getElementById('timelineSubtitle').innerHTML =
     `<span>${comm.name}</span>` +
@@ -742,8 +708,7 @@ function openUnitTimeline(unitId) {
     `<span style="color:var(--text-muted);">·</span>` +
     `<span>${floorplan}</span>` +
     `<span style="color:var(--text-muted);">·</span>` +
-    `<span style="text-transform:capitalize;">${status}</span>` +
-    (currentRC ? `<span style="color:var(--text-muted);">·</span>${rcPill(currentRC)}` : '');
+    `<span style="text-transform:capitalize;">${status}</span>`;
 
   // Group by event date (the calendar day the event happened).
   const groups = {};
@@ -776,8 +741,6 @@ function openUnitTimeline(unitId) {
         rowsHtml.push(`<dt>Gross Rent</dt><dd>${fmtUSD(ev.grossRent)}</dd>`);
         rowsHtml.push(`<dt>Concession</dt><dd>${ev.concession ? ev.concession.description : '<span class="feed-muted">None</span>'}</dd>`);
         rowsHtml.push(`<dt>Net Eff. Rent</dt><dd>${fmtUSD(ev.netEffRent)}</dd>`);
-        const rcLabel = ev.rcProgram ? (RC_STYLE_BY_CODE[ev.rcProgram]?.label ?? '') : '';
-        rowsHtml.push(`<dt>RC Program</dt><dd>${ev.rcProgram ? rcPill(ev.rcProgram) + ` <span class="feed-muted" style="margin-left:6px;">${rcLabel}</span>` : '<span class="feed-muted">None</span>'}</dd>`);
       }
       const details = rowsHtml.length ? `<dl class="tl-grid">${rowsHtml.join('')}</dl>` : '';
       body += `

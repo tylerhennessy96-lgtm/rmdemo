@@ -75,11 +75,8 @@
     <span class="status-legend-group">Unit Status:</span>
     <span class="status-legend-item"><span style="background:#f87171;color:#fff;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">VC</span>Vacant</span>
     <span class="status-legend-item"><span style="background:#94a3b8;color:#fff;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">ON</span>On Notice</span>
-    <span class="status-legend-sep">|</span>
-    <span class="status-legend-group">Rent Control:</span>
-    <span class="status-legend-item"><span style="background:#e05252;color:#fff;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">RC</span>Rent Control</span>
-    <span class="status-legend-item"><span style="background:#f5a623;color:#fff;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">AF</span>Affordable</span>
-    <span class="status-legend-item"><span style="background:#60a5fa;color:#1a1d23;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">HA</span>Housing Assistance</span>
+    <span class="status-legend-item"><span style="background:#f1f5f9;color:#64748b;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">RC</span>Rent Control</span>
+    <span class="status-legend-item"><span style="background:rgba(245,166,35,0.15);color:#92400e;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">AF</span>Affordable</span>
   </div>
 
   <!-- ── Stats Bar ── -->
@@ -220,14 +217,6 @@
       <div class="adv-section">
         <div class="adv-section-title">Unit ID</div>
         <input type="text" id="unitIdSearch" placeholder="Search or paste unit ID..." oninput="renderTable()" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:7px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--text-primary);background:var(--surface);outline:none;">
-      </div>
-
-      <div class="adv-section" id="rcFilterSection">
-        <div class="adv-section-title">Rent Control Status</div>
-        <label class="ms-option"><input type="checkbox" value="RC" onchange="renderTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:#e05252;color:#fff;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;">RC</span>Rent Control</span></label>
-        <label class="ms-option"><input type="checkbox" value="AF" onchange="renderTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:#f5a623;color:#fff;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;">AF</span>Affordable</span></label>
-        <label class="ms-option"><input type="checkbox" value="HA" onchange="renderTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:#60a5fa;color:#1a1d23;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;">HA</span>Housing Assistance</span></label>
-        <label class="ms-option"><input type="checkbox" value="null" onchange="renderTable()">Not Applicable</label>
       </div>
 
       <div class="adv-section">
@@ -677,17 +666,6 @@ let exposureChartInst = null;
 let compChartInst = null;
 let unitPricingChartInst = null;
 let unitPricingOpen = false;
-const rcConfig = {
-  RC: { label: 'RC', bg: '#e05252', color: '#fff' },
-  AF: { label: 'AF', bg: '#f5a623', color: '#fff' },
-  HA: { label: 'HA', bg: '#60a5fa', color: '#1a1d23' },
-};
-
-function getSelectedRcFilters() {
-  const cbs = document.querySelectorAll('#rcFilterSection input[type=checkbox]:checked');
-  return [...cbs].map(c => c.value);
-}
-
 // ── Anchor Prices ─────────────────────────────────────────
 function findUnit(unitId) {
   for (const c of PRICING_DATA) {
@@ -1364,7 +1342,7 @@ function renderTable() {
           ${prop.availPct}%${parseFloat(prop.availPct) > 5.0 ? ' <span class="warn-icon">⚠</span>' : ''}
         </span>
       </td>
-      <td style="text-align:center"></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td>
       <td>${alertBell(prop.alerts)}</td>
       <td></td><td></td><td></td><td></td><td></td>
       <td class="price-change-abs" style="padding-left:8px;padding-right:4px;"><input class="price-input" type="text" value="${priceOverrides[prop.id]?.absChange!=null?priceOverrides[prop.id].absChange:''}" placeholder="$" oninput="this.value=this.value.replace(/[^0-9.-]/g,'')" onkeydown="if(event.key==='Enter'){applyDollarFormat(this);handleAbsInput(this,'${prop.id}','property',{});this.blur();}" onblur="applyDollarFormat(this)"></td>
@@ -1394,7 +1372,7 @@ function renderTable() {
           <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${Math.round(bt.totalUnits * bt.availPct / 100)}/${bt.totalUnits}</span>
         </td>
         <td><span class="avail-pct" style="cursor:pointer;text-decoration:underline;" onclick="event.stopPropagation();toggleExposureForProp('${btKey}','${prop.name.replace(/'/g,"\\'")} &middot; ${bt.type}',${bt.recRent})">${bt.availPct}%${parseFloat(bt.availPct) > 5.0 ? ' <span class="warn-icon">⚠</span>' : ''}</span></td>
-        <td style="text-align:center"></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td>
         <td>${alertBell(bt.alerts)}</td>
         <td></td>
         <td style="text-align:right;color:var(--text-secondary);font-size:12px;">${(()=>{const arr=(bt.units??[]).map(u=>u.anchorPrice).filter(p=>p!=null);return arr.length>0?'$'+Math.round(arr.reduce((s,p)=>s+p,0)/arr.length).toLocaleString():'\u2014';})()}</td>
@@ -1420,7 +1398,6 @@ function renderTable() {
         return new Date(a.availDate) - new Date(b.availDate);
       });
 
-      const rcFilter = getSelectedRcFilters();
       const floorplanF = document.getElementById('floorplanFilter')?.value;
       const filteredUnits = sorted.filter(unit => {
         if (unitIdQuery && !unit.id.toLowerCase().includes(unitIdQuery)) return false;
@@ -1429,7 +1406,6 @@ function renderTable() {
           const ud = new Date(2000 + parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
           if (ud < availRangeStart || ud > availRangeEnd) return false;
         }
-        if (rcFilter.length > 0 && !rcFilter.includes(unit.rcStatus ?? 'null')) return false;
         if (floorplanF && unit.floorplan !== floorplanF) return false;
         return true;
       });
@@ -1440,11 +1416,12 @@ function renderTable() {
         const statusCfg = { vacant: { label: 'VC', bg: '#f87171', color: '#fff' }, 'on notice': { label: 'ON', bg: '#94a3b8', color: '#fff' } };
         const sCfg = statusCfg[unit.status] || statusCfg.vacant;
         const statusBadge = `<span style="display:inline-flex;align-items:center;justify-content:center;background:${sCfg.bg};color:${sCfg.color};font-size:9px;font-weight:700;letter-spacing:.03em;border-radius:3px;padding:1px 4px;min-width:20px;">${sCfg.label}</span>`;
-        const rcLink = unit.rcStatus && ['RC','AF','HA'].includes(unit.rcStatus)
-          ? `<a href="rent-control.html?tab=management&commId=${prop.id}&bedType=${encodeURIComponent(bt.type)}&unitId=${encodeURIComponent(unit.id)}" title="Configure rent control for this unit" style="display:inline-flex;align-items:center;margin-left:4px;color:var(--text-muted);text-decoration:none;vertical-align:middle;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8"/><polyline points="9,1 13,1 13,5"/><line x1="7" y1="7" x2="13" y2="1"/></svg></a>`
+        const rcRules = typeof getActiveRcRulesForUnit === 'function' ? getActiveRcRulesForUnit(prop.id, bt.type, unit.id) : [];
+        const rcBadge = rcRules.length
+          ? `<span title="${rcRules.map(r => r.name).join(' · ').replace(/"/g, '&quot;')}" style="display:inline-flex;align-items:center;justify-content:center;background:#f1f5f9;color:#64748b;font-size:9px;font-weight:700;letter-spacing:.03em;border-radius:3px;padding:1px 4px;min-width:20px;">RC</span>`
           : '';
-        const rcBadge = unit.rcStatus && rcConfig[unit.rcStatus]
-          ? `<span style="display:inline-flex;align-items:center;justify-content:center;background:${rcConfig[unit.rcStatus].bg};color:${rcConfig[unit.rcStatus].color};font-size:9px;font-weight:700;letter-spacing:.03em;border-radius:3px;padding:1px 4px;min-width:20px;">${unit.rcStatus}</span>${rcLink}`
+        const afBadge = unit.isAffordable
+          ? `<span title="Affordable housing designation" style="display:inline-flex;align-items:center;justify-content:center;background:rgba(245,166,35,0.15);color:#92400e;font-size:9px;font-weight:700;letter-spacing:.03em;border-radius:3px;padding:1px 4px;margin-left:6px;">AF</span>`
           : '';
         const ov = priceOverrides[unit.id];
         const hasOverride = ov && (ov.absChange != null || ov.pctChange != null);
@@ -1463,9 +1440,9 @@ function renderTable() {
             : `<a href="javascript:void(0)" onclick="openUnitPricingPanel(this)" data-prior="${unit.priorRent||0}" data-rec="${unit.recRent}" data-id="${unit.id}" style="color:var(--accent);text-decoration:underline;cursor:pointer;">${fmt(unit.recRent)}</a>`)
           : '';
         utr.innerHTML = `
-          <td>${unit.id}</td>
+          <td>${unit.id}${afBadge}</td>
           <td></td>
-          <td style="text-align:center">${rcBadge}</td>
+          <td style="text-align:center;">${rcBadge}</td>
           <td>${statusBadge}</td>
           <td>${unit.moveOut}</td>
           <td>${unit.availDate}</td>

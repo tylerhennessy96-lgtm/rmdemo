@@ -52,12 +52,9 @@
     </button>
   </div>
 
-  <!-- Legend -->
   <div class="status-legend">
-    <span class="status-legend-group">Rent Control:</span>
-    <span class="status-legend-item"><span style="background:#e05252;color:#fff;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">RC</span>Rent Control</span>
-    <span class="status-legend-item"><span style="background:#f5a623;color:#fff;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">AF</span>Affordable</span>
-    <span class="status-legend-item"><span style="background:#60a5fa;color:#1a1d23;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">HA</span>Housing Assistance</span>
+    <span class="status-legend-item"><span style="background:#f1f5f9;color:#64748b;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">RC</span>Rent Control</span>
+    <span class="status-legend-item"><span style="background:rgba(245,166,35,0.15);color:#92400e;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px;line-height:1.4;">AF</span>Affordable</span>
   </div>
 
   <div id="renewalsStatsBar" style="background:var(--surface);border-bottom:1px solid var(--border);padding:6px 20px;display:flex;gap:0;align-items:center;flex-shrink:0;"></div>
@@ -105,13 +102,6 @@
         <label class="ms-option"><input type="checkbox" value="Accepted" onchange="renderRenewalsTable()">Accepted</label>
         <label class="ms-option"><input type="checkbox" value="Declined" onchange="renderRenewalsTable()">Declined</label>
         <label class="ms-option"><input type="checkbox" value="Negotiating" onchange="renderRenewalsTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:rgba(167,139,250,0.2);color:#6d28d9;font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">Negotiating</span></span></label>
-      </div>
-      <div class="adv-section" id="rcFilterSection">
-        <div class="adv-section-title">Rent Control Status</div>
-        <label class="ms-option"><input type="checkbox" value="RC" onchange="renderRenewalsTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:#e05252;color:#fff;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;">RC</span>Rent Control</span></label>
-        <label class="ms-option"><input type="checkbox" value="AF" onchange="renderRenewalsTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:#f5a623;color:#fff;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;">AF</span>Affordable</span></label>
-        <label class="ms-option"><input type="checkbox" value="HA" onchange="renderRenewalsTable()"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="background:#60a5fa;color:#1a1d23;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;">HA</span>Housing Assistance</span></label>
-        <label class="ms-option"><input type="checkbox" value="null" onchange="renderRenewalsTable()">Not Applicable</label>
       </div>
       <div class="adv-footer">
         <button class="btn-apply" onclick="renderRenewalsTable();toggleAdvDrawer()">Apply</button>
@@ -302,7 +292,6 @@ document.addEventListener('click',e=>{if(!e.target.closest('.ms-wrap'))document.
 function toggleAdvDrawer(){ advDrawerOpen=!advDrawerOpen; document.getElementById('advDrawer').classList.toggle('open',advDrawerOpen); }
 
 function getSelectedStatusFilters(){ return[...document.querySelectorAll('#statusFilters input:checked')].map(c=>c.value); }
-function getSelectedRcFilters(){ return[...document.querySelectorAll('#rcFilterSection input:checked')].map(c=>c.value); }
 
 // Render
 function renderRenewalsTable(){
@@ -312,7 +301,6 @@ function renderRenewalsTable(){
   if(typeof RENEWALS_DATA==='undefined')return;
   const sf=getMsValues('state'),mf=getMsValues('metro'),cf=getMsValues('community'),rf=getMsValues('rm'),df=getMsValues('cd');
   const statusF=getSelectedStatusFilters();
-  const rcF=getSelectedRcFilters();
 
   let data=RENEWALS_DATA.filter(c=>{
     if(sf.length&&!sf.includes(c.state))return false;
@@ -323,7 +311,6 @@ function renderRenewalsTable(){
     return true;
   });
 
-  const rcCfg={RC:{bg:'#e05252',color:'#fff'},AF:{bg:'#f5a623',color:'#fff'},HA:{bg:'#60a5fa',color:'#1a1d23'}};
   const stCfg={Pending:{bg:'rgba(245,166,35,0.12)',color:'#92400e'},'Offer Sent':{bg:'rgba(96,165,250,0.12)',color:'#1d4ed8'},Accepted:{bg:'rgba(74,222,128,0.12)',color:'#15803d'},Declined:{bg:'rgba(248,113,113,0.12)',color:'#b91c1c'},Negotiating:{bg:'rgba(167,139,250,0.12)',color:'#6d28d9'}};
 
   data.forEach(comm=>{
@@ -345,9 +332,6 @@ function renderRenewalsTable(){
       const sorted=[...bt.renewalUnits].sort((a,b)=>a.leaseEndDays-b.leaseEndDays);
       sorted.forEach(u=>{
         if(statusF.length&&!statusF.includes(u.status))return;
-        if(rcF.length&&!rcF.includes(u.rcStatus??'null'))return;
-        const rcLink = u.rcStatus && ['RC','AF','HA'].includes(u.rcStatus) ? `<a href="rent-control.html?tab=management&commId=${comm.id}&bedType=${encodeURIComponent(comm.bedTypes.find(b=>b.renewalUnits.some(x=>x.id===u.id))?.type ?? '')}&unitId=${encodeURIComponent(u.id)}" title="Configure rent control for this unit" style="display:inline-flex;align-items:center;margin-left:4px;color:var(--text-muted);text-decoration:none;vertical-align:middle;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8"/><polyline points="9,1 13,1 13,5"/><line x1="7" y1="7" x2="13" y2="1"/></svg></a>` : '';
-        const rc=u.rcStatus&&rcCfg[u.rcStatus]?`<span style="display:inline-flex;align-items:center;justify-content:center;background:${rcCfg[u.rcStatus].bg};color:${rcCfg[u.rcStatus].color};font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;min-width:20px;">${u.rcStatus}</span>${rcLink}`:'';
         const daysC=u.leaseEndDays<=30?'#e05252':u.leaseEndDays<=60?'#f5a623':'var(--text-primary)';
         let dtoDisp;
         if(u.status==='Offer Sent'||u.status==='Accepted'||u.status==='Declined'||u.status==='Negotiating'){
@@ -369,9 +353,16 @@ function renderRenewalsTable(){
         const selBrd=isSel?'var(--accent)':'var(--border-mid)';
         const selTxt=isSel?'Selected':'Select';
         const utr=document.createElement('tr');utr.className='row-unit';
+        const rcRules = typeof getActiveRcRulesForUnit === 'function' ? getActiveRcRulesForUnit(comm.id, bt.type, u.id) : [];
+        const rcBadge = rcRules.length
+          ? `<span title="${rcRules.map(r => r.name).join(' · ').replace(/"/g, '&quot;')}" style="display:inline-flex;align-items:center;justify-content:center;background:#f1f5f9;color:#64748b;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;min-width:20px;">RC</span>`
+          : '';
+        const afBadge = u.isAffordable
+          ? `<span title="Affordable housing designation" style="display:inline-flex;align-items:center;justify-content:center;background:rgba(245,166,35,0.15);color:#92400e;font-size:9px;font-weight:700;border-radius:3px;padding:1px 4px;margin-left:6px;">AF</span>`
+          : '';
         utr.innerHTML=`
-          <td style="padding-left:44px;font-size:12px;">${u.id}</td>
-          <td style="text-align:center;">${rc}</td>
+          <td style="padding-left:44px;font-size:12px;">${u.id}${afBadge}</td>
+          <td style="text-align:center;">${rcBadge}</td>
           <td>${u.leaseEnd}</td>
           <td style="color:${daysC};font-weight:500;">${u.leaseEndDays}d</td>
           <td>${dtoDisp}</td>

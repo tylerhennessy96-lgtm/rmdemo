@@ -69,6 +69,11 @@ function makeNote() {
   return { text, expires };
 }
 
+// Communities whose units are flagged as Affordable housing (LIHTC / Section 8
+// / inclusionary-zoning designations). Concentrated in a couple of
+// properties — this is a unit attribute, independent of rent control rules.
+const AFFORDABLE_COMMUNITIES = new Set(['WCC-007', 'WCC-009']);
+
 function makeUnits(communityId, bedType, count, baseRent) {
   const moveOutDays = [10, 25, 40];
   const availDays = [18, 33, 48];
@@ -107,6 +112,7 @@ function makeUnits(communityId, bedType, count, baseRent) {
       alerts,
       note: makeNote(),
       rcStatus: ['RC','AF','HA',null,null,null][Math.floor(Math.random()*6)],
+      isAffordable: AFFORDABLE_COMMUNITIES.has(communityId),
       anchorPrice: Math.round(recRent * (0.96 + Math.random() * 0.06) / 10) * 10,
     };
   });
@@ -260,6 +266,7 @@ function makeRenewalUnits(commId, bedType, count, baseRent) {
       id: commId+'-'+bedType.replace(' ','')+'-'+num,
       leaseId: 'LSE-'+commId.slice(-3)+'-'+num,
       bedType, rcStatus: rcStatuses[Math.floor(Math.random()*7)],
+      isAffordable: AFFORDABLE_COMMUNITIES.has(commId),
       leaseEnd, leaseEndDays, daysToOffer, leaseTerm, leasePrice, concsAmt, netEffLeasePrice,
       renewalOfferPrice, renewalOfferTerm: 12, renewalPricePct, deltaToNewLease, newLeasePrice,
       status,
@@ -519,36 +526,121 @@ function getMarketKPIs(data){
   return{moreAggressive:moreAgg,windsorLeading:leading,mostCommonType:mc?mc[0]:'\u2014',mostCommonPct:mc?Math.round(mc[1]/active.length*100):0,unverified};
 }
 
-// Rent Control — full model
-const RC_PROGRAM_TYPES=[{code:'RS',label:'Rent Stabilized',description:'Annual increases set by Rent Guidelines Board',color:'#e8007d',bg:'rgba(232,0,125,0.1)',maxIncrease:{oneYear:2.75,twoYear:5.25},authority:'NYC Rent Guidelines Board'},{code:'RC',label:'Rent Controlled',description:'Maximum Base Rent system, pre-1947 buildings',color:'#e05252',bg:'rgba(248,113,113,0.12)',maxIncrease:{annual:7.5},authority:'NYS DHCR'},{code:'AB',label:'AB 1482',description:'CA Tenant Protection Act: 5% + CPI, max 10%',color:'#f5a623',bg:'rgba(245,166,35,0.12)',maxIncrease:{annual:10},authority:'CA Dept. of Housing'},{code:'S8',label:'Section 8',description:'HUD Housing Choice Voucher',color:'#60a5fa',bg:'rgba(96,165,250,0.12)',maxIncrease:null,authority:'HUD'},{code:'LI',label:'LIHTC',description:'Low Income Housing Tax Credit — rents capped at 30% AMI',color:'#a78bfa',bg:'rgba(167,139,250,0.12)',maxIncrease:null,authority:'IRS / State Housing Agency'},{code:'AF',label:'Affordable',description:'Local affordable housing program',color:'#4ade80',bg:'rgba(74,222,128,0.12)',maxIncrease:null,authority:'Local Housing Authority'},{code:'HA',label:'Housing Assistance',description:'Other government housing assistance',color:'#94a3b8',bg:'rgba(148,163,184,0.12)',maxIncrease:null,authority:'Various'}];
-function getProgramConfig(code){return RC_PROGRAM_TYPES.find(p=>p.code===code)??null;}
+// Rent Control — rule config. Rules are data only; they aren't evaluated
+// against actual prices anywhere else in the app.
+//
+// Current CPI rate (percent). In production this would come from a BLS feed;
+// for the POC it's a single hard-coded constant that flows into every
+// CPI-based rule's effective-cap computation.
+const CURRENT_CPI = 3.1;
 
-const RENT_CONTROL_DATA=COMMUNITIES.map(comm=>{
-  const hasRC=Math.random()>0.3;const cp=PRICING_DATA.find(p=>p.id===comm.id);
-  const commProg=hasRC&&Math.random()>0.5?RC_PROGRAM_TYPES[Math.floor(Math.random()*RC_PROGRAM_TYPES.length)]:null;
-  const fd=d=>(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0')+'/'+String(d.getFullYear()).slice(2);
-  const bedTypes=(cp?.bedTypes??[]).map(bt=>{
-    const btProg=hasRC&&Math.random()>0.6?RC_PROGRAM_TYPES[Math.floor(Math.random()*7)]:null;
-    const units=(bt.units??[]).map(unit=>{
-      const uProg=hasRC&&Math.random()>0.65?RC_PROGRAM_TYPES[Math.floor(Math.random()*7)]:null;
-      const eff=uProg??btProg??commProg??null;
-      const maxInc=eff?.maxIncrease?.annual??eff?.maxIncrease?.oneYear??null;
-      const curInc=parseFloat((Math.random()*8+1).toFixed(1));
-      let cs='N/A',cc='var(--text-muted)';
-      if(eff&&maxInc){if(curInc<=maxInc*0.9){cs='Compliant';cc='#15803d';}else if(curInc<=maxInc){cs='At Limit';cc='#f5a623';}else{cs='Exceeds Limit';cc='#e05252';}}
-      const br=unit.recRent??bt.recRent??1800;const mar=maxInc?Math.round(br*(1+maxInc/100)):null;
-      const rd=new Date(2020,Math.floor(Math.random()*12),Math.floor(Math.random()*28)+1);
-      const nf=new Date(2025,Math.floor(Math.random()*12),Math.floor(Math.random()*28)+1);
-      return{...unit,baseRent:br,unitProgram:uProg,btProgram:btProg,commProgram:commProg,effectiveProgram:eff,maxIncrease:maxInc,currentIncrease:curInc,complianceStatus:cs,complianceColor:cc,maxAllowableRent:mar,registrationDate:eff?fd(rd):null,nextFilingDate:eff?fd(nf):null,notes:null};
-    });
-    const rcu=units.filter(u=>u.effectiveProgram);const ncu=units.filter(u=>u.complianceStatus==='Exceeds Limit');const alu=units.filter(u=>u.complianceStatus==='At Limit');
-    return{...bt,units,btProgram:btProg,rcUnits:rcu.length,totalUnits:units.length,nonCompliantUnits:ncu.length,atLimitUnits:alu.length};
-  });
-  const allU=bedTypes.flatMap(bt=>bt.units);const rcu=allU.filter(u=>u.effectiveProgram);const nc=allU.filter(u=>u.complianceStatus==='Exceeds Limit');const al=allU.filter(u=>u.complianceStatus==='At Limit');
-  return{...comm,commProgram:commProg,bedTypes,allUnits:allU,rcUnitCount:rcu.length,totalUnitCount:allU.length,nonCompliantCount:nc.length,atLimitCount:al.length,hasAnyRC:rcu.length>0};
-});
+// Rule shape:
+//   formula.type: 'flat_pct' | 'flat_dollar' | 'cpi' | 'lesser_of' | 'greater_of'
+//   flat_pct    → { type, value }
+//   flat_dollar → { type, value }
+//   cpi         → { type, cpiMultiplier (percent, 100 = raw CPI), cpiAddition (percent) }
+//   lesser_of/greater_of → { type, operands: [sub, sub] }, sub ∈ {flat_pct, flat_dollar, cpi}
+//   (nested lesser_of / greater_of is not allowed — flatten to a single level)
+let RENT_CONTROL_RULES = [
+  {
+    id: 'RCR-001',
+    name: 'Windsor at Falcon Creek cap',
+    scope: { communityIds: ['WCC-001'], bedTypes: 'all', unitIds: 'all' },
+    formula: { type: 'flat_pct', value: 5 },
+    ceiling: null,
+    timeframe: '12mo',
+    firstYearProtection: false,
+    noticePeriodDays: 60,
+    buildingAgeExemptionYears: null,
+    vacancyDecontrol: 'none',
+    vacancyBonusPct: null,
+    vacancyMaxTotalPct: null,
+    bankingAllowed: false,
+    bankingMaxMultiplier: null,
+    activeFrom: '2026-03-01T00:00:00.000Z',
+    activeTo: null,
+    notes: 'Tighter cap for Falcon Creek per asset management request.',
+  },
+  {
+    id: 'RCR-002',
+    name: 'Windsor Plantation 1-bed cap',
+    scope: { communityIds: ['WCC-006'], bedTypes: ['1 Bed'], unitIds: 'all' },
+    formula: { type: 'flat_dollar', value: 125 },
+    ceiling: null,
+    timeframe: '12mo',
+    firstYearProtection: false,
+    noticePeriodDays: 30,
+    buildingAgeExemptionYears: null,
+    vacancyDecontrol: 'none',
+    vacancyBonusPct: null,
+    vacancyMaxTotalPct: null,
+    bankingAllowed: false,
+    bankingMaxMultiplier: null,
+    activeFrom: '2026-02-01T00:00:00.000Z',
+    activeTo: '2026-12-31T00:00:00.000Z',
+    notes: 'Dollar-cap for one-bed units through year-end.',
+  },
+  {
+    id: 'RCR-003',
+    name: 'WCC-004-2Bed-002 legacy cap',
+    scope: { communityIds: ['WCC-004'], bedTypes: ['2 Bed'], unitIds: ['WCC-004-2Bed-002'] },
+    formula: { type: 'flat_pct', value: 3 },
+    ceiling: null,
+    timeframe: '12mo',
+    firstYearProtection: false,
+    noticePeriodDays: 30,
+    buildingAgeExemptionYears: null,
+    vacancyDecontrol: 'none',
+    vacancyBonusPct: null,
+    vacancyMaxTotalPct: null,
+    bankingAllowed: false,
+    bankingMaxMultiplier: null,
+    activeFrom: '2026-01-01T00:00:00.000Z',
+    activeTo: null,
+    notes: 'Legacy tenant agreement — honor reduced cap until turnover.',
+  },
+  {
+    id: 'RCR-004',
+    name: 'Legacy portfolio caps',
+    scope: { communityIds: ['WCC-009', 'WCC-012'], bedTypes: 'all', unitIds: 'all' },
+    formula: { type: 'flat_pct', value: 4 },
+    ceiling: null,
+    timeframe: '12mo',
+    firstYearProtection: false,
+    noticePeriodDays: 60,
+    buildingAgeExemptionYears: null,
+    vacancyDecontrol: 'none',
+    vacancyBonusPct: null,
+    vacancyMaxTotalPct: null,
+    bankingAllowed: false,
+    bankingMaxMultiplier: null,
+    activeFrom: '2026-01-01T00:00:00.000Z',
+    activeTo: null,
+    notes: 'Carried over from the prior management agreement for these two properties.',
+  },
+];
 
-function getRCKPIs(data){const allU=data.flatMap(c=>c.allUnits);const rcu=allU.filter(u=>u.effectiveProgram);const nc=allU.filter(u=>u.complianceStatus==='Exceeds Limit');const al=allU.filter(u=>u.complianceStatus==='At Limit');const cwrc=data.filter(c=>c.hasAnyRC);const byProg={};rcu.forEach(u=>{const c=u.effectiveProgram.code;byProg[c]=(byProg[c]||0)+1;});return{totalRCUnits:rcu.length,totalUnits:allU.length,nonCompliant:nc.length,atLimit:al.length,commWithRC:cwrc.length,byProgram:byProg};}
+// Returns every currently-active rule whose scope covers this (community, bed
+// type, unit) triple. A rule is active when "now" (ms) falls within
+// activeFrom..activeTo; activeTo === null means indefinite. Scope matches when
+// each of communityIds / bedTypes / unitIds is either the string 'all' or an
+// array that includes the unit's value.
+function getActiveRcRulesForUnit(commId, bedType, unitId, nowMs) {
+  if (typeof RENT_CONTROL_RULES === 'undefined') return [];
+  const t = nowMs == null ? Date.now() : nowMs;
+  const matches = [];
+  for (const rule of RENT_CONTROL_RULES) {
+    const fromMs = Date.parse(rule.activeFrom);
+    const toMs   = rule.activeTo ? Date.parse(rule.activeTo) : Infinity;
+    if (t < fromMs || t > toMs) continue;
+    const s = rule.scope;
+    if (s.communityIds !== 'all' && !s.communityIds.includes(commId)) continue;
+    if (s.bedTypes     !== 'all' && !s.bedTypes.includes(bedType))    continue;
+    if (s.unitIds      !== 'all' && !s.unitIds.includes(unitId))      continue;
+    matches.push(rule);
+  }
+  return matches;
+}
 
 // Chart data for exposure panel
 const CHART_MONTHS = ['Jan 25','Feb 25','Mar 25','Apr 25','May 25','Jun 25','Jul 25','Aug 25','Sep 25','Oct 25','Nov 25','Dec 25'];
@@ -612,16 +704,6 @@ const LEASE_HISTORY_DATA = (function() {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
   const roundTen = n => Math.round(n / 10) * 10;
-
-  // Pre-index each unit's current RC program code (if any). We don't model
-  // historical RC changes, so events use today's assignment as a proxy for
-  // "at time of event" — fine for a 90-day POC window.
-  const rcByUnit = {};
-  RENT_CONTROL_DATA.forEach(c => {
-    c.allUnits.forEach(u => {
-      rcByUnit[u.id] = u.effectiveProgram ? u.effectiveProgram.code : null;
-    });
-  });
 
   // Weight each unit by community size so larger properties get more events.
   const unitPool = [];
@@ -719,7 +801,7 @@ const LEASE_HISTORY_DATA = (function() {
         bedType: u.bedType,
         eventType: type,
         resident, user: u.rm,
-        leaseTerm: null, grossRent: null, concession: null, netEffRent: null, rcProgram: null,
+        leaseTerm: null, grossRent: null, concession: null, netEffRent: null,
       };
 
       if (type === 'new_lease_signed') {
@@ -730,7 +812,6 @@ const LEASE_HISTORY_DATA = (function() {
         ev.grossRent  = gross;
         ev.concession = conc;
         ev.netEffRent = netEffFor(gross, term, conc);
-        ev.rcProgram  = rcByUnit[u.unitId] || null;
         ev.moveInDate  = iso(addDays(evDate, Math.floor(rng() * 22)));    // 0–21 days after signing
         ev.moveOutDate = iso(addMonths(evDate, term));                    // signing + term
       } else if (type === 'renewal_signed') {
@@ -741,7 +822,6 @@ const LEASE_HISTORY_DATA = (function() {
         ev.grossRent  = gross;
         ev.concession = conc;
         ev.netEffRent = netEffFor(gross, term, conc);
-        ev.rcProgram  = rcByUnit[u.unitId] || null;
         const rEff = addDays(evDate, Math.floor(rng() * 61));             // 0–60 days after signing
         ev.renewalEffectiveDate = iso(rEff);
         ev.moveOutDate = iso(addMonths(rEff, term));                      // renewal effective + term
