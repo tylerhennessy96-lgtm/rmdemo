@@ -202,7 +202,7 @@ const PARAM_DEFAULTS = {
   modelHoldDays:0, modelPriceDown:-0.5, modelPriceUp:5, manualHoldDays:1,
   freeDaysOnNotice:2, freeDaysVacant:2, onNoticeMax:15, vacantMax:30,
   onNoticeRecovery:100, vacantRecovery:100,
-  renewalLeadDays:90, relConcession:0, inheritBestPrice:false,
+  renewalLeadDays:90, relConcession:0, deltaNewLeaseMax:5, deltaNewLeaseMin:-2, inheritBestPrice:false,
   roundingMethod:'nearest', roundingAmount:10,
 };
 

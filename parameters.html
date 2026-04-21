@@ -275,6 +275,43 @@ function onD(input, key) {
 function onS(sel, key) { paramChanges[key] = sel.value; checkSave(); }
 function onT(cb, key) { paramChanges[key] = cb.checked; checkSave(); }
 
+// Signed percent input (1-decimal, sign-constrained). `sign` is 'positive' or 'negative'.
+function pInpSigned(val, key, sign) {
+  const ck = key in paramChanges;
+  const bd = ck ? '2px solid var(--accent)' : '1px solid transparent';
+  const cur = (ck ? paramChanges[key] : val);
+  const formatted = Number(cur).toFixed(1);
+  return `<input type="text" value="${formatted}%" data-key="${key}" data-sign="${sign}" data-prev="${formatted}" onfocus="this.style.border='1px solid var(--accent)';this.style.background='#fff'" oninput="onSignedInput(this)" onblur="onSignedBlur(this)" style="width:68px;text-align:center;border:${bd};border-radius:4px;padding:4px 6px;font-family:'Inter',sans-serif;font-size:12.5px;background:transparent;outline:none;color:var(--text-primary);">`;
+}
+function onSignedInput(input) {
+  const raw = input.value.replace(/[^0-9.\-]/g, '');
+  input.value = raw;
+  input.style.border = '2px solid var(--accent)';
+}
+function onSignedBlur(input) {
+  const key  = input.dataset.key;
+  const sign = input.dataset.sign;
+  const prev = parseFloat(input.dataset.prev);
+  const raw  = parseFloat(input.value.replace(/[^0-9.\-]/g, ''));
+  const valid = !isNaN(raw) && (sign === 'positive' ? raw >= 0 : raw <= 0);
+  if (!valid) {
+    input.value = prev.toFixed(1) + '%';
+    input.style.background = 'rgba(232,0,125,0.12)';
+    input.style.border = '2px solid var(--accent)';
+    setTimeout(() => {
+      input.style.background = 'transparent';
+      if (!(key in paramChanges)) input.style.border = '1px solid transparent';
+    }, 450);
+    return;
+  }
+  paramChanges[key] = raw;
+  input.dataset.prev = raw.toFixed(1);
+  input.value = raw.toFixed(1) + '%';
+  input.style.background = 'transparent';
+  input.style.border = '2px solid var(--accent)';
+  checkSave();
+}
+
 function checkSave() {
   const btn = document.getElementById('paramSaveBtn');
   if (btn) btn.style.display = Object.keys(paramChanges).length > 0 ? 'inline-flex' : 'none';
@@ -312,6 +349,8 @@ const SECTION_COLUMNS = {
     { label:'Revenue Manager',   contextual: true, render:(p,k,comm)=>`<span style="color:var(--text-secondary);font-size:12px;">${comm?.rm ?? '\u2014'}</span>` },
     { label:'Renewal Lead Days', render:(p,k)=>dInp(p.renewalLeadDays,k('renewalLeadDays')) },
     { label:'Rel. Concession',   render:(p,k)=>pInp(p.relConcession,'%',k('relConcession')) },
+    { label:'Delta Max',         render:(p,k)=>pInpSigned(p.deltaNewLeaseMax,k('deltaNewLeaseMax'),'positive') },
+    { label:'Delta Min',         render:(p,k)=>pInpSigned(p.deltaNewLeaseMin,k('deltaNewLeaseMin'),'negative') },
   ],
   exposure: [
     { label:'Prio 1 (%)', render:(p,k)=>pInp(p.exposurePrio1,'%',k('exposurePrio1')) },
@@ -364,6 +403,12 @@ function renderColumnSection(sectionId) {
   const data = getFilteredCommunities();
   const ths = cols.map(c => `<th style="text-align:center;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:10px 8px;white-space:nowrap;">${c.label}</th>`).join('');
 
+  const sectionNote = sectionId === 'renewals'
+    ? `<div style="padding:10px 14px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;margin-bottom:14px;font-size:12.5px;color:var(--text-secondary);line-height:1.5;">
+         <strong style="color:var(--text-primary);">Delta corridor</strong> constrains renewal offers relative to the new lease price for the same unit. <strong>Max</strong> is the ceiling (renewal above new lease); <strong>Min</strong> is the floor (renewal below new lease).
+       </div>`
+    : '';
+
   let rows = '';
   data.forEach(comm => {
     const propOpen = expandedProperties.has(comm.id);
@@ -395,7 +440,7 @@ function renderColumnSection(sectionId) {
     }
   });
 
-  return `
+  return sectionNote + `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
       <div style="overflow-x:auto;">
         <table class="data-table" style="width:100%;">
@@ -657,6 +702,7 @@ function renderHistoryView(variation) {
     'Model Hold Days':'modelHoldDays', 'Price Change Down':'modelPriceDown', 'Price Change Up':'modelPriceUp', 'Manual Hold Days':'manualHoldDays',
     'Free Days On Notice':'freeDaysOnNotice', 'Free Days Vacant':'freeDaysVacant', 'On Notice Max':'onNoticeMax', 'Vacant Max':'vacantMax', 'On Notice Recovery':'onNoticeRecovery', 'Vacant Recovery':'vacantRecovery',
     'Renewal Lead Days':'renewalLeadDays', 'Rel. Concession':'relConcession',
+    'Delta Max':'deltaNewLeaseMax', 'Delta Min':'deltaNewLeaseMin',
     'Prio 1':'exposurePrio1', 'Prio 2':'exposurePrio2', 'Max':'exposureMax', 'Min':'exposureMin',
     'Trigger Threshold':'concessionTrigger', 'LT Lower':'ltLower', 'LT Upper':'ltUpper',
   };
