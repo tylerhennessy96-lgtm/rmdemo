@@ -403,12 +403,6 @@ function renderColumnSection(sectionId) {
   const data = getFilteredCommunities();
   const ths = cols.map(c => `<th style="text-align:center;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:10px 8px;white-space:nowrap;">${c.label}</th>`).join('');
 
-  const sectionNote = sectionId === 'renewals'
-    ? `<div style="padding:10px 14px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;margin-bottom:14px;font-size:12.5px;color:var(--text-secondary);line-height:1.5;">
-         <strong style="color:var(--text-primary);">Delta corridor</strong> constrains renewal offers relative to the new lease price for the same unit. <strong>Max</strong> is the ceiling (renewal above new lease); <strong>Min</strong> is the floor (renewal below new lease).
-       </div>`
-    : '';
-
   let rows = '';
   data.forEach(comm => {
     const propOpen = expandedProperties.has(comm.id);
@@ -440,7 +434,7 @@ function renderColumnSection(sectionId) {
     }
   });
 
-  return sectionNote + `
+  return `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
       <div style="overflow-x:auto;">
         <table class="data-table" style="width:100%;">
