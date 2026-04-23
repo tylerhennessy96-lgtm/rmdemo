@@ -530,8 +530,11 @@ function rebuildRenewalTermModal(unit) {
     return exp.toLocaleString('en-US', { month: 'short', year: '2-digit' });
   });
 
-  const labelColW = 130;
-  const dataColW = 80;
+  // Tightened so the full 2–24 term range fits a 1920px viewport without
+  // horizontal scroll. Matches the same constants in pricing.html's LT modal.
+  const labelColW = 110;
+  const isWide = window.innerWidth > 1600;
+  const dataColW = isWide ? 66 : 60;
   const recColCellBg = 'rgba(232,0,125,0.05)';
   const recHeadBg = 'rgba(232,0,125,0.12)';
   const neBg = 'rgba(232,0,125,0.04)';
@@ -541,14 +544,14 @@ function rebuildRenewalTermModal(unit) {
   const thead = `
     <thead>
       <tr style="height:36px;">
-        <th style="${stickyLabel}width:auto;padding:8px 12px;font-size:13px;font-weight:700;color:var(--text-primary);text-align:left;border-bottom:2px solid var(--border);vertical-align:middle;">Term</th>
+        <th style="${stickyLabel}width:auto;padding:8px 10px;font-size:13px;font-weight:700;color:var(--text-primary);text-align:left;border-bottom:2px solid var(--border);vertical-align:middle;">Term</th>
         ${terms.map(t => {
           const isRec = t === recTerm;
           return `<th style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:13px;font-weight:700;border-bottom:2px solid var(--border);vertical-align:middle;${isRec ? recHeadStyle : 'color:var(--text-primary);'}">${t}${isRec ? '<div style="font-size:9px;color:var(--accent);font-weight:600;margin-top:1px;">★ Rec</div>' : ''}</th>`;
         }).join('')}
       </tr>
       <tr style="height:36px;">
-        <th style="${stickyLabel}width:auto;padding:8px 12px;font-size:11px;color:var(--text-muted);font-weight:400;text-align:left;border-bottom:1px solid var(--border);vertical-align:middle;">Expiry Date</th>
+        <th style="${stickyLabel}width:auto;padding:8px 10px;font-size:11px;color:var(--text-muted);font-weight:400;text-align:left;border-bottom:1px solid var(--border);vertical-align:middle;">Expiry Date</th>
         ${expiryLabels.map((l, i) => `<th style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:11px;color:var(--text-muted);font-weight:400;border-bottom:1px solid var(--border);vertical-align:middle;${terms[i] === recTerm ? 'background:'+recColCellBg+';' : ''}">${l}</th>`).join('')}
       </tr>
     </thead>`;
@@ -556,15 +559,15 @@ function rebuildRenewalTermModal(unit) {
   const tbody = `
     <tbody>
       <tr style="height:36px;">
-        <td style="${stickyLabel}width:auto;padding:8px 12px;font-size:12.5px;font-weight:600;vertical-align:middle;">Price / mo</td>
+        <td style="${stickyLabel}width:auto;padding:8px 10px;font-size:12.5px;font-weight:600;vertical-align:middle;">Price / mo</td>
         ${prices.map((p, i) => `<td style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:12.5px;font-weight:600;vertical-align:middle;${terms[i] === recTerm ? 'background:'+recColCellBg+';' : ''}">$${p.toLocaleString()}</td>`).join('')}
       </tr>
       <tr style="height:36px;">
-        <td style="${stickyLabel}width:auto;padding:8px 12px;font-size:12px;color:var(--accent);font-weight:500;vertical-align:middle;">Concs. Amt</td>
+        <td style="${stickyLabel}width:auto;padding:8px 10px;font-size:12px;color:var(--accent);font-weight:500;vertical-align:middle;">Concs. Amt</td>
         ${concessions.map((c, i) => `<td style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:12px;color:var(--accent);vertical-align:middle;${terms[i] === recTerm ? 'background:'+recColCellBg+';' : ''}">${c > 0 ? '-$' + c : '—'}</td>`).join('')}
       </tr>
       <tr style="height:36px;">
-        <td style="${stickyLabel}width:auto;padding:8px 12px;font-size:13px;font-weight:700;color:var(--text-primary);border-top:2px solid var(--border);background:${neBg};vertical-align:middle;">Net Eff.</td>
+        <td style="${stickyLabel}width:auto;padding:8px 10px;font-size:13px;font-weight:700;color:var(--text-primary);border-top:2px solid var(--border);background:${neBg};vertical-align:middle;">Net Eff.</td>
         ${netEffs.map((n, i) => `<td style="width:${dataColW}px;min-width:${dataColW}px;padding:7px 4px;text-align:center;font-size:13px;font-weight:700;color:var(--text-primary);border-top:2px solid var(--border);vertical-align:middle;background:${terms[i] === recTerm ? recColCellBg : neBg};">$${n.toLocaleString()}</td>`).join('')}
       </tr>
     </tbody>`;

@@ -216,6 +216,14 @@ const PARAM_DEFAULTS = {
   onNoticeRecovery:100, vacantRecovery:100,
   renewalLeadDays:90, relConcession:0, deltaNewLeaseMax:5, deltaNewLeaseMin:-2, inheritBestPrice:false,
   roundingMethod:'nearest', roundingAmount:10,
+  // Concession rounding is configured separately from rent rounding — dollar
+  // values and percent values each have their own method + amount.
+  concessionRounding: {
+    dollarMethod:  'nearest',  // 'nearest' | 'up' | 'down'
+    dollarAmount:  25,         // one of [1, 5, 10, 25, 50, 100]
+    percentMethod: 'nearest',
+    percentAmount: 5,          // one of [1, 2.5, 5, 10]
+  },
 };
 
 const COMPETITOR_EXCLUSIONS = [
@@ -228,6 +236,7 @@ const PARAMETERS_DATA = COMMUNITIES.map(c => ({
   ...c,
   params: {
     ...PARAM_DEFAULTS,
+    concessionRounding: { ...PARAM_DEFAULTS.concessionRounding },
     inheritBestPrice: Math.random() > 0.4,
     concessionPrio1: Math.floor(Math.random() * 20 + 10),
     concessionPrio2: Math.floor(Math.random() * 30 + 20),
@@ -236,6 +245,7 @@ const PARAMETERS_DATA = COMMUNITIES.map(c => ({
     type: bt,
     params: {
       ...PARAM_DEFAULTS,
+      concessionRounding: { ...PARAM_DEFAULTS.concessionRounding },
       inheritBestPrice: Math.random() > 0.4,
       concessionPrio1: Math.floor(Math.random() * 20 + 10),
       concessionPrio2: Math.floor(Math.random() * 30 + 20),

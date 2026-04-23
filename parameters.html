@@ -58,6 +58,7 @@ const PARAM_SECTIONS = [
       { id: 'renewals',     label: 'Renewals' },
       { id: 'bestprice',    label: 'Best Price' },
       { id: 'rounding',     label: 'Price Rounding' },
+      { id: 'concessionrounding', label: 'Concession Price Rounding' },
     ]
   },
   {
@@ -93,6 +94,7 @@ const SECTION_META = {
   corridor:     { title:'Price to Comp. Corridor', desc:'Bounds for pricing relative to competitor benchmarks' },
   concessions:  { title:'Concession Alerts', desc:'Thresholds for triggering concession recommendations' },
   rounding:     { title:'Price Rounding Rules', desc:'How recommended rents are rounded before display' },
+  concessionrounding: { title:'Concession Price Rounding', desc:'Configure how concession values are rounded before being applied to offers. Dollar-based and percent-based concessions can have independent rounding rules.' },
   competitor:   { title:'Competitor Data Exclusions', desc:'Jurisdictions where competitor pricing data must be excluded per regulatory requirements' },
   history:      { title:'Parameter History', desc:'View parameters as configured on a specific date' },
 };
@@ -390,6 +392,8 @@ function renderParamPanel() {
     body = renderBestPriceSection();
   } else if (selectedParamSection === 'rounding') {
     body = renderRoundingSection();
+  } else if (selectedParamSection === 'concessionrounding') {
+    body = renderConcessionRoundingSection();
   } else if (selectedParamSection === 'competitor') {
     body = renderCompetitorSection();
   } else if (selectedParamSection === 'history') {
@@ -516,6 +520,20 @@ function applyRounding(price, method, amount) {
   if (method === 'floor')    return Math.floor(price / amount) * amount;
   return price;
 }
+// Concession rounding uses 'nearest' / 'up' / 'down' as method identifiers
+// (matching the dropdown options on the Concession Price Rounding panel).
+// Percent amounts may be fractional (e.g. 2.5%), so keep values as floats.
+function applyConcRounding(value, method, amount) {
+  if (amount <= 0) return value;
+  if (method === 'nearest') return Math.round(value / amount) * amount;
+  if (method === 'up')      return Math.ceil(value / amount) * amount;
+  if (method === 'down')    return Math.floor(value / amount) * amount;
+  return value;
+}
+function fmtPct(v) {
+  // Render 2.5% without trailing zeros; integers stay integers.
+  return (Number.isInteger(v) ? v.toString() : v.toFixed(1)) + '%';
+}
 
 function renderRoundingSection() {
   const data = getFilteredCommunities();
@@ -559,6 +577,91 @@ function renderRoundingSection() {
             <th style="text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:10px 8px;">Method</th>
             <th style="text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:10px 8px;">Amount</th>
             <th style="text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:10px 8px;">Preview</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ── Concession Price Rounding ────────────────────────────
+// Mirrors renderRoundingSection's structure: same paramChanges pending-write
+// pattern, same Save-changes flow. Keys are dotted so saveParams can route
+// them into the nested params.concessionRounding object.
+const CONC_DOLLAR_AMOUNTS  = [1, 5, 10, 25, 50, 100];
+const CONC_PERCENT_AMOUNTS = [1, 2.5, 5, 10];
+const CONC_DOLLAR_SAMPLE   = 1237;   // preview reference value
+const CONC_PERCENT_SAMPLE  = 47;
+
+function renderConcessionRoundingSection() {
+  const data = getFilteredCommunities();
+  const rows = data.map(comm => {
+    const p  = comm.params;
+    const cr = p.concessionRounding ?? {};
+    const kDM = comm.id + '-property-concessionRounding.dollarMethod';
+    const kDA = comm.id + '-property-concessionRounding.dollarAmount';
+    const kPM = comm.id + '-property-concessionRounding.percentMethod';
+    const kPA = comm.id + '-property-concessionRounding.percentAmount';
+    const dMethod = paramChanges[kDM] ?? cr.dollarMethod  ?? 'nearest';
+    const dAmount = parseFloat(paramChanges[kDA] ?? cr.dollarAmount  ?? 25);
+    const pMethod = paramChanges[kPM] ?? cr.percentMethod ?? 'nearest';
+    const pAmount = parseFloat(paramChanges[kPA] ?? cr.percentAmount ?? 5);
+    const dPrev = applyConcRounding(CONC_DOLLAR_SAMPLE,  dMethod, dAmount);
+    const pPrev = applyConcRounding(CONC_PERCENT_SAMPLE, pMethod, pAmount);
+
+    const selectStyle = "border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:'Inter',sans-serif;font-size:12px;background:var(--surface);color:var(--text-primary);cursor:pointer;outline:none;";
+    const methodOptions = (m) => `
+      <option value="nearest" ${m==='nearest'?'selected':''}>Round to nearest</option>
+      <option value="up"      ${m==='up'     ?'selected':''}>Round up to</option>
+      <option value="down"    ${m==='down'   ?'selected':''}>Round down to</option>`;
+    const dAmountOpts = CONC_DOLLAR_AMOUNTS.map(v => `<option value="${v}" ${dAmount===v?'selected':''}>$${v}</option>`).join('');
+    const pAmountOpts = CONC_PERCENT_AMOUNTS.map(v => `<option value="${v}" ${pAmount===v?'selected':''}>${fmtPct(v)}</option>`).join('');
+
+    // Subtle vertical rule between dollar and percent groups for readability
+    const groupDivider = 'border-left:1px solid var(--border);';
+
+    return `
+      <tr class="row-property">
+        <td style="position:sticky;left:0;background:var(--surface);z-index:5;font-weight:600;white-space:nowrap;padding:10px 12px;">${comm.name}</td>
+        <td style="padding:8px 10px;">
+          <select onchange="onS(this,'${kDM}');renderParamPanel();" style="${selectStyle}">${methodOptions(dMethod)}</select>
+        </td>
+        <td style="padding:8px 10px;">
+          <select onchange="onS(this,'${kDA}');renderParamPanel();" style="${selectStyle}">${dAmountOpts}</select>
+        </td>
+        <td style="padding:8px 10px;font-size:12px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;">Sample: $${CONC_DOLLAR_SAMPLE.toLocaleString()} → <strong style="color:var(--accent);">$${dPrev.toLocaleString()}</strong></td>
+        <td style="padding:8px 10px;${groupDivider}">
+          <select onchange="onS(this,'${kPM}');renderParamPanel();" style="${selectStyle}">${methodOptions(pMethod)}</select>
+        </td>
+        <td style="padding:8px 10px;">
+          <select onchange="onS(this,'${kPA}');renderParamPanel();" style="${selectStyle}">${pAmountOpts}</select>
+        </td>
+        <td style="padding:8px 10px;font-size:12px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;">Sample: ${CONC_PERCENT_SAMPLE}% → <strong style="color:var(--accent);">${fmtPct(pPrev)}</strong></td>
+      </tr>
+    `;
+  }).join('');
+
+  const hStyle   = "text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;";
+  const hGroup   = "text-align:left;font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:8px 12px;background:var(--body-bg);border-bottom:1px solid var(--border);";
+  const hSub     = "text-align:left;font-size:10.5px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;";
+
+  return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <table class="data-table" style="width:100%;">
+        <thead>
+          <tr>
+            <th rowspan="2" style="${hStyle}position:sticky;left:0;background:var(--surface);z-index:6;min-width:220px;vertical-align:bottom;">Community</th>
+            <th colspan="3" style="${hGroup}">Dollar Rounding</th>
+            <th colspan="3" style="${hGroup}border-left:1px solid var(--border);">Percent Rounding</th>
+          </tr>
+          <tr>
+            <th style="${hSub}">Method</th>
+            <th style="${hSub}">Amount</th>
+            <th style="${hSub}">Preview</th>
+            <th style="${hSub}border-left:1px solid var(--border);">Method</th>
+            <th style="${hSub}">Amount</th>
+            <th style="${hSub}">Preview</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -751,8 +854,21 @@ function saveParams() {
     const paramKey = parts.slice(3).join('-');
     const comm = PARAMETERS_DATA.find(c => c.id === commId);
     if (!comm) return;
-    if (level === 'property') { comm.params[paramKey] = val; }
-    else { const bt = comm.bedTypes.find(b => b.type === level); if (bt) bt.params[paramKey] = val; }
+    const target = level === 'property'
+      ? comm.params
+      : (comm.bedTypes.find(b => b.type === level)?.params);
+    if (!target) return;
+    // Dotted paramKey (e.g. "concessionRounding.dollarMethod") routes into a
+    // nested object; numeric amount fields are parsed to float so the UI can
+    // read them back with `===` comparisons.
+    if (paramKey.includes('.')) {
+      const [obj, sub] = paramKey.split('.');
+      if (!target[obj] || typeof target[obj] !== 'object') target[obj] = {};
+      const isAmountField = sub === 'dollarAmount' || sub === 'percentAmount';
+      target[obj][sub] = isAmountField ? parseFloat(val) : val;
+    } else {
+      target[paramKey] = val;
+    }
   });
   Object.keys(paramChanges).forEach(k => delete paramChanges[k]);
   renderParamPanel();
