@@ -76,6 +76,27 @@ function makeNote() {
 // which keeps the demo visually varied rather than all-or-nothing.
 const AFFORDABLE_COMMUNITIES = new Set(['WCC-001', 'WCC-003', 'WCC-007', 'WCC-009']);
 
+// Deterministic per-unit prior lease term drawn from a weighted distribution:
+// 12mo ~60%, 13mo ~15%, 14mo ~10%, 6/9/15/18mo ~4% each. Keyed off the unit
+// id so reloads produce the same term per unit (no seeded RNG needed since
+// the id is itself deterministic). Returns null when there's no prior lease.
+function _pickPriorLeaseTerm(unitId, hasPriorLease) {
+  if (!hasPriorLease) return null;
+  let h = 2166136261; // FNV-1a-ish
+  for (let i = 0; i < unitId.length; i++) {
+    h ^= unitId.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  const r = h % 100;
+  if (r < 60) return 12;  // 0–59 → 12mo (60%)
+  if (r < 75) return 13;  // 60–74 → 13mo (15%)
+  if (r < 85) return 14;  // 75–84 → 14mo (10%)
+  if (r < 89) return 6;   // 85–88 → 6mo  (4%)
+  if (r < 93) return 9;   // 89–92 → 9mo  (4%)
+  if (r < 97) return 15;  // 93–96 → 15mo (4%)
+  return 18;              // 97–99 → 18mo (3%)
+}
+
 function makeUnits(communityId, bedType, count, baseRent) {
   const moveOutDays = [10, 25, 40];
   const availDays = [18, 33, 48];
@@ -91,12 +112,14 @@ function makeUnits(communityId, bedType, count, baseRent) {
     const alertPool = ['concession', 'comp', 'optimizer', 'manual'];
     const alerts = alertPool.filter(() => Math.random() > 0.65);
     const grossRent = priorRent + [0,50,100,150][Math.floor(Math.random()*4)];
+    const unitId = `${communityId}-${bedType.replace(' ', '')}-${num}`;
     return {
-      id: `${communityId}-${bedType.replace(' ', '')}-${num}`,
+      id: unitId,
       status,
       moveOut,
       availDate,
       priorRent,
+      priorLeaseTerm: _pickPriorLeaseTerm(unitId, priorRent != null && priorRent > 0),
       grossRent,
       hasPriorConcession: grossRent > priorRent,
       floorplan: ['Studio','1BR/1BA','1BR/2BA','2BR/1BA','2BR/2BA','3BR/2BA'][Math.floor(Math.random()*6)],

@@ -71,7 +71,7 @@ const PARAM_SECTIONS = [
     ]
   },
   {
-    group: 'Compliance',
+    group: 'Competitor Data',
     icon: '<rect x="3" y="3" width="8" height="10" rx="1"/><polyline points="5,7 7,9 11,5"/>',
     items: [
       { id: 'competitor', label: 'Competitor Exclusions' },
@@ -100,7 +100,7 @@ const SECTION_META = {
 };
 
 let selectedParamSection = 'optimization';
-let expandedParamGroups = new Set(['Pricing','Alerts','Compliance']);
+let expandedParamGroups = new Set(['Pricing','Alerts','Competitor Data']);
 let expandedProperties = new Set();
 const paramChanges = {};
 
@@ -707,9 +707,6 @@ function renderCompetitorSection() {
           </select>
         </td>
         <td style="color:var(--text-secondary);padding:10px 12px;font-size:12px;">${comm.rm}</td>
-        <td style="padding:10px 12px;">
-          <input type="text" placeholder="e.g. Legal counsel recommendation" value="${comm.competitorExclusionReason ?? ''}" onblur="setExclusionReason('${comm.id}', this.value)" style="border:none;border-bottom:1px solid var(--border-mid);background:transparent;font-family:'Inter',sans-serif;font-size:12px;color:var(--text-secondary);padding:2px 0;outline:none;width:100%;">
-        </td>
       </tr>
     `;
   }).join('');
@@ -733,7 +730,6 @@ function renderCompetitorSection() {
             <th style="text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;">Metro</th>
             <th style="text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;min-width:200px;">Pricing Model</th>
             <th style="text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;">Revenue Manager</th>
-            <th style="text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;min-width:240px;">Reason / Notes</th>
           </tr>
         </thead>
         <tbody id="compExclusionRows">${rows}</tbody>
