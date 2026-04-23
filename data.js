@@ -69,10 +69,12 @@ function makeNote() {
   return { text, expires };
 }
 
-// Communities whose units are flagged as Affordable housing (LIHTC / Section 8
-// / inclusionary-zoning designations). Concentrated in a couple of
-// properties — this is a unit attribute, independent of rent control rules.
-const AFFORDABLE_COMMUNITIES = new Set(['WCC-007', 'WCC-009']);
+// Communities with any units under an Affordable-housing designation
+// (LIHTC / Section 8 / inclusionary-zoning). Being in the set only makes a
+// community *eligible* for AF flags — only a subset of each community's
+// units is actually marked affordable (see makeUnits / makeRenewalUnits),
+// which keeps the demo visually varied rather than all-or-nothing.
+const AFFORDABLE_COMMUNITIES = new Set(['WCC-001', 'WCC-003', 'WCC-007', 'WCC-009']);
 
 function makeUnits(communityId, bedType, count, baseRent) {
   const moveOutDays = [10, 25, 40];
@@ -112,7 +114,7 @@ function makeUnits(communityId, bedType, count, baseRent) {
       alerts,
       note: makeNote(),
       rcStatus: ['RC','AF','HA',null,null,null][Math.floor(Math.random()*6)],
-      isAffordable: AFFORDABLE_COMMUNITIES.has(communityId),
+      isAffordable: AFFORDABLE_COMMUNITIES.has(communityId) && Math.random() < 0.35,
       anchorPrice: Math.round(recRent * (0.96 + Math.random() * 0.06) / 10) * 10,
     };
   });
@@ -159,7 +161,11 @@ const TERM_DATA = COMMUNITIES.map(c => {
     if (i < 3 || i === 11) return Math.random() > 0.2;
     return Math.random() > 0.35;
   });
-  const premiums = availability.map(a => a ? (Math.random() > 0.5 ? 50 : 35) : null);
+  // Term premiums apply only to short-term leases (terms 2–9 months). Longer
+  // terms are priced at the standard rate — they MUST be 0 in the seed so
+  // the term-premiums UI doesn't flash stale numbers before rendering the
+  // read-only zero cells.
+  const premiums = availability.map((a, i) => i > 7 ? 0 : (a ? (Math.random() > 0.5 ? 50 : 35) : null));
   return {
     ...c,
     availability,
@@ -167,7 +173,7 @@ const TERM_DATA = COMMUNITIES.map(c => {
     bedTypes: UNIT_TYPES.map(bt => ({
       type: bt,
       availability: Array.from({ length: 24 }, (_, i) => Math.random() > 0.3),
-      premiums: Array.from({ length: 24 }, () => Math.random() > 0.5 ? 50 : 35),
+      premiums: Array.from({ length: 24 }, (_, i) => i > 7 ? 0 : (Math.random() > 0.5 ? 50 : 35)),
     })),
   };
 });
@@ -266,7 +272,7 @@ function makeRenewalUnits(commId, bedType, count, baseRent) {
       id: commId+'-'+bedType.replace(' ','')+'-'+num,
       leaseId: 'LSE-'+commId.slice(-3)+'-'+num,
       bedType, rcStatus: rcStatuses[Math.floor(Math.random()*7)],
-      isAffordable: AFFORDABLE_COMMUNITIES.has(commId),
+      isAffordable: AFFORDABLE_COMMUNITIES.has(commId) && Math.random() < 0.35,
       leaseEnd, leaseEndDays, daysToOffer, leaseTerm, leasePrice, concsAmt, netEffLeasePrice,
       renewalOfferPrice, renewalOfferTerm: 12, renewalPricePct, deltaToNewLease, newLeasePrice,
       status,
@@ -287,77 +293,127 @@ const RENEWALS_DATA = PRICING_DATA.map(comm => ({
 }));
 
 // Concession Management — priority-based stacking
-const CONCESSION_TYPE_OPTIONS=['Fixed Discount','Free Period','Waived Fee','Reduced Deposit','Gift Card','Percent Discount'];
+// Legacy Auto-Params dropdowns still reference these display names; the
+// New/Edit form no longer asks for a categorical concession "type" — it asks
+// only for a value type (flat_monthly / total_dollar / pct_monthly_rent) plus
+// an amount, apply-to mode, and applicable lease terms.
+const CONCESSION_TYPE_OPTIONS=['Flat monthly','Total $ amount','Total amount as % of monthly rent'];
 const CONCESSION_VALUE_TYPES = [
-  { id: 'absolute',     label: '$ Amount',          desc: 'One-time dollar discount' },
-  { id: 'relative',     label: '% of Monthly Rent', desc: 'Percentage off each month' },
-  { id: 'flat_monthly', label: 'Flat Monthly $',    desc: 'Fixed $ reduction per month for lease term' },
-  { id: 'free_period',  label: 'Months Free',       desc: 'X months free within the lease' },
+  { id: 'flat_monthly',     label: 'Flat monthly',                     desc: 'Fixed $ amount per month, applied across the lease term' },
+  { id: 'total_dollar',     label: 'Total $ amount',                   desc: 'One-time $ amount spread across the lease term' },
+  { id: 'pct_monthly_rent', label: 'Total amount as % of monthly rent', desc: 'One-time amount equal to X% of a month’s rent, spread across the lease term' },
 ];
 const _fmtD=d=>(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0')+'/'+String(d.getFullYear()).slice(2);
 const _RM_NAMES = ['Sarah Mitchell','Tom Bridges','Priya Nair','Carlos Reyes','Amy Chen'];
 
+// Legacy; still referenced by Auto-Params Default Type dropdown — all three
+// new value types amortise into a monthly impact, so everything is monthly.
 const MONTHLY_BY_TYPE = {
-  'Fixed Discount': true,
-  'Free Period': true,
-  'Percent Discount': true,
-  'Waived Application Fee': false,
-  'Waived Parking Fee': false,
-  'Waived Fee': false,
-  'Reduced Deposit': false,
-  'Gift Card': false,
-  'Look & Lease': false,
+  'Flat monthly': true,
+  'Total $ amount': true,
+  'Total amount as % of monthly rent': true,
 };
 
-function computeUnitConcessions(baseRent,concessions){
-  const active=concessions.filter(c=>c.status==='Active').sort((a,b)=>a.priority-b.priority);
-  if(!active.length)return{totalAmount:0,effectiveRent:baseRent,stackedList:[]};
-  const ns=active.find(c=>!c.stackable);
-  let applied=ns?active.filter(c=>c.priority<ns.priority||c.id===ns.id):active;
-  const totalAmount=applied.reduce((sum,c)=>{
-    if(!c.monthly)return sum;
-    if(c.valueType==='relative')return sum+Math.round(baseRent*c.value/100);
-    if(c.valueType==='free_period')return sum+Math.round(baseRent*c.value/12);
-    if(c.valueType==='flat_monthly')return sum+c.value;
-    return sum+c.value;
-  },0);
-  return{totalAmount,effectiveRent:Math.max(0,baseRent-totalAmount),stackedList:applied};
+// Returns the union of lease terms (2..24) marked available across every bed
+// type covered by the given scope. Used to populate the Applicable Lease
+// Terms multi-select on the concession form.
+function getAvailableTermsForScope(commId, bedType) {
+  if (typeof TERM_DATA === 'undefined') return [];
+  const comm = TERM_DATA.find(c => c.id === commId);
+  if (!comm) return [];
+  const bts = bedType ? comm.bedTypes.filter(b => b.type === bedType) : comm.bedTypes;
+  const terms = new Set();
+  bts.forEach(bt => {
+    for (let m = 2; m <= 24; m++) {
+      if (bt.availability[m]) terms.add(m);
+    }
+  });
+  return Array.from(terms).sort((a, b) => a - b);
+}
+
+// Monthly $ impact of a single concession at the given gross rent and lease
+// term. Lease term defaults to 12 for display contexts where the actual
+// signed term is not yet known.
+function concessionMonthlyImpact(conc, baseRent, leaseTerm) {
+  const term = leaseTerm || 12;
+  if (conc.valueType === 'flat_monthly')     return conc.value;
+  if (conc.valueType === 'total_dollar')     return Math.round(conc.value / term);
+  if (conc.valueType === 'pct_monthly_rent') return Math.round(baseRent * (conc.value / 100) / term);
+  return 0;
+}
+
+// Stacks every Active concession that covers the requested lease term,
+// respecting priority + non-stackable overrides. Returns:
+//   totalAmount    — sum of monthly impact for applyTo='net_eff' concessions
+//                    (i.e. monthly reduction to the tenant's effective rent)
+//   grossAddition  — sum of monthly impact for applyTo='gross' concessions
+//                    (i.e. monthly markup layered onto the advertised gross)
+//   effectiveRent  — baseRent − totalAmount (what the tenant pays monthly)
+//   stackedList    — concessions that survived priority / stackable filtering
+//                    and the lease-term filter
+function computeUnitConcessions(baseRent, concessions, leaseTerm) {
+  const term = leaseTerm || 12;
+  const active = concessions
+    .filter(c => c.status === 'Active')
+    .filter(c => !Array.isArray(c.applicableLeaseTerms) || c.applicableLeaseTerms.length === 0 || c.applicableLeaseTerms.includes(term))
+    .sort((a, b) => a.priority - b.priority);
+  if (!active.length) return { totalAmount: 0, grossAddition: 0, effectiveRent: baseRent, stackedList: [] };
+  const ns = active.find(c => !c.stackable);
+  const applied = ns ? active.filter(c => c.priority < ns.priority || c.id === ns.id) : active;
+  let totalAmount = 0;
+  let grossAddition = 0;
+  applied.forEach(c => {
+    const impact = concessionMonthlyImpact(c, baseRent, term);
+    if (c.applyTo === 'gross') grossAddition += impact;
+    else                        totalAmount   += impact;
+  });
+  return {
+    totalAmount,
+    grossAddition,
+    effectiveRent: Math.max(0, baseRent - totalAmount),
+    stackedList: applied,
+  };
 }
 
 function generateConcessions(comm, bt, unitId, level) {
   const baseRent = bt.recRent;
-  const typeOpts = {
-    community: ['Waived Fee','Reduced Deposit','Gift Card'],
-    bedtype:   ['Fixed Discount','Free Period','Percent Discount','Waived Fee'],
-    unit:      ['Fixed Discount','Free Period','Percent Discount','Waived Fee','Gift Card'],
-  };
   const prob = { community: 0.5, bedtype: 0.55, unit: 0.4 };
   if (Math.random() > prob[level]) return [];
   const count = level === 'unit'
     ? (Math.random() > 0.7 ? 2 : 1)
     : (Math.random() > 0.6 ? 2 : 1);
 
+  const availableTerms = getAvailableTermsForScope(comm.id, bt?.type ?? null);
+  const defaultTerm    = 12;
+
   return Array.from({ length: count }, (_, i) => {
-    const type = typeOpts[level][Math.floor(Math.random() * typeOpts[level].length)];
-    // Pick valueType — Free Period maps to free_period; Percent Discount → relative;
-    // Fixed Discount can be absolute OR flat_monthly; everything else → absolute.
-    let valueType;
-    if (type === 'Free Period') valueType = 'free_period';
-    else if (type === 'Percent Discount') valueType = 'relative';
-    else if (type === 'Fixed Discount') valueType = Math.random() > 0.5 ? 'flat_monthly' : 'absolute';
-    else valueType = 'absolute';
+    // Pick one of the three value types with a roughly even distribution.
+    const roll = Math.random();
+    let valueType, value;
+    if (roll < 0.4) {
+      valueType = 'flat_monthly';
+      value = [50, 75, 100, 150, 200, 250][Math.floor(Math.random() * 6)];
+    } else if (roll < 0.8) {
+      valueType = 'total_dollar';
+      value = [500, 750, 1000, 1500, 2000, 2500][Math.floor(Math.random() * 6)];
+    } else {
+      valueType = 'pct_monthly_rent';
+      value = [25, 50, 75, 100][Math.floor(Math.random() * 4)];
+    }
 
-    let value;
-    if (valueType === 'relative') value = Math.floor(Math.random() * 8) + 2;
-    else if (valueType === 'free_period') value = Math.floor(Math.random() * 2) + 1;
-    else if (valueType === 'flat_monthly') value = [25, 50, 75, 100][Math.floor(Math.random() * 4)];
-    else value = [50, 75, 100, 150, 200, 250, 300][Math.floor(Math.random() * 7)];
+    // Display amount = monthly impact at the default 12-month term.
+    const tempConc = { valueType, value };
+    const displayAmount = concessionMonthlyImpact(tempConc, baseRent, defaultTerm);
 
-    let displayAmount;
-    if (valueType === 'relative') displayAmount = Math.round(baseRent * value / 100);
-    else if (valueType === 'free_period') displayAmount = Math.round(baseRent * value / 12);
-    else if (valueType === 'flat_monthly') displayAmount = value;
-    else displayAmount = value;
+    // ~15% of seeded concessions use the gross-up mode.
+    const applyTo = Math.random() > 0.85 ? 'gross' : 'net_eff';
+
+    // Default to all terms available for the scope; if TERM_DATA has none
+    // available for this scope, fall back to a sensible default set so the
+    // concession still applies to typical leases.
+    const applicableLeaseTerms = availableTerms.length > 0
+      ? [...availableTerms]
+      : [6, 9, 12];
 
     const priority = i + 1 + (level === 'community' ? 0 : level === 'bedtype' ? 2 : 4);
     const stackable = Math.random() > 0.25;
@@ -372,19 +428,6 @@ function generateConcessions(comm, bt, unitId, level) {
     const endDate = _fmtD(ed);
     const lo = level !== 'unit' ? Math.floor(Math.random() * 15) + 3 : null;
     const lt = lo ? Math.floor(lo * (Math.random() * 0.5 + 0.15)) : null;
-
-    // Term-specific eligibility (~30% of concessions): list of enabled term lengths
-    const termSpecific = Math.random() > 0.7;
-    const termValues = termSpecific
-      ? [6, 9, 12, 15, 18, 24].filter(() => Math.random() > 0.3)
-      : null;
-
-    // Eligibility
-    const unitStatus = ['all', 'vacant', 'on_notice'][Math.floor(Math.random() * 3)];
-    const minVacancyDays = Math.random() > 0.6 ? Math.floor(Math.random() * 21 + 7) : null;
-
-    // Application: discount vs gross_up
-    const application = Math.random() > 0.8 ? 'gross_up' : 'discount';
 
     // Audit trail
     const createdBy = _RM_NAMES[Math.floor(Math.random() * _RM_NAMES.length)];
@@ -409,14 +452,14 @@ function generateConcessions(comm, bt, unitId, level) {
         date: _fmtDate(hd),
         editedBy: _RM_NAMES[Math.floor(Math.random() * _RM_NAMES.length)],
         field,
-        oldValue: field === 'amount' ? '$' + (value - 50)
-          : field === 'status' ? 'Paused'
-          : field === 'endDate' ? '03/31/25'
-          : 'New Lease',
+        oldValue: field === 'amount' ? '$' + Math.max(0, value - 50)
+          : field === 'status'       ? 'Paused'
+          : field === 'endDate'      ? '03/31/25'
+          :                            'New Lease',
         newValue: field === 'amount' ? '$' + value
-          : field === 'status' ? 'Active'
-          : field === 'endDate' ? endDate
-          : leaseType,
+          : field === 'status'       ? 'Active'
+          : field === 'endDate'      ? endDate
+          :                            leaseType,
       };
     });
 
@@ -424,8 +467,9 @@ function generateConcessions(comm, bt, unitId, level) {
       id: 'CONC-' + level.toUpperCase() + '-' + (unitId ?? bt.type) + '-' + comm.id + '-' + i,
       level, commId: comm.id, commName: comm.name,
       bedType: bt?.type ?? null, unitId: unitId ?? null,
-      leaseType, type, value, valueType, displayAmount,
-      monthly: MONTHLY_BY_TYPE[type] ?? true,
+      leaseType, value, valueType, displayAmount,
+      applyTo, applicableLeaseTerms,
+      monthly: true,
       priority, stackable, status,
       daysActive: da, daysRemaining: dr,
       startDate, endDate,
@@ -437,10 +481,6 @@ function generateConcessions(comm, bt, unitId, level) {
       taken: level === 'unit' ? Math.random() > 0.5 : null,
       daysVacant: level === 'unit' ? Math.floor(Math.random() * 45) + 5 : null,
       daysToSign: level === 'unit' && Math.random() > 0.5 ? Math.floor(Math.random() * 20) + 2 : null,
-      // New fields
-      termSpecific, termValues,
-      unitStatus, minVacancyDays,
-      application,
       createdBy, createdAt, editedBy, editedAt, history,
     };
   });
@@ -544,8 +584,8 @@ const CURRENT_CPI = 3.1;
 let RENT_CONTROL_RULES = [
   {
     id: 'RCR-001',
-    name: 'Windsor Turtle Creek cap',
-    scope: { communityIds: ['WCC-001'], bedTypes: 'all', unitIds: 'all' },
+    name: 'Windsor Turtle Creek 1-bed cap',
+    scope: { communityIds: ['WCC-001'], bedTypes: ['1 Bed'], unitIds: 'all' },
     formula: { type: 'flat_pct', value: 5 },
     ceiling: null,
     timeframe: '12mo',
@@ -559,13 +599,13 @@ let RENT_CONTROL_RULES = [
     bankingMaxMultiplier: null,
     activeFrom: '2026-03-01T00:00:00.000Z',
     activeTo: null,
-    notes: 'Tighter cap for Turtle Creek per asset management request.',
+    notes: 'Tighter cap on Turtle Creek 1-bed units per asset management request.',
   },
   {
     id: 'RCR-002',
-    name: 'Windsor Interlock 1-bed cap',
-    scope: { communityIds: ['WCC-006'], bedTypes: ['1 Bed'], unitIds: 'all' },
-    formula: { type: 'flat_dollar', value: 125 },
+    name: 'Windsor CityLine legacy cap',
+    scope: { communityIds: ['WCC-003'], bedTypes: ['2 Bed'], unitIds: ['WCC-003-2Bed-001'] },
+    formula: { type: 'flat_pct', value: 3.5 },
     ceiling: null,
     timeframe: '12mo',
     firstYearProtection: false,
@@ -576,14 +616,14 @@ let RENT_CONTROL_RULES = [
     vacancyMaxTotalPct: null,
     bankingAllowed: false,
     bankingMaxMultiplier: null,
-    activeFrom: '2026-02-01T00:00:00.000Z',
-    activeTo: '2026-12-31T00:00:00.000Z',
-    notes: 'Dollar-cap for one-bed units through year-end.',
+    activeFrom: '2026-01-01T00:00:00.000Z',
+    activeTo: null,
+    notes: 'Carried over from the prior tenant agreement on unit WCC-003-2Bed-001.',
   },
   {
     id: 'RCR-003',
-    name: 'WCC-004-2Bed-002 legacy cap',
-    scope: { communityIds: ['WCC-004'], bedTypes: ['2 Bed'], unitIds: ['WCC-004-2Bed-002'] },
+    name: 'WCC-005-2Bed-002 legacy cap',
+    scope: { communityIds: ['WCC-005'], bedTypes: ['2 Bed'], unitIds: ['WCC-005-2Bed-002'] },
     formula: { type: 'flat_pct', value: 3 },
     ceiling: null,
     timeframe: '12mo',
@@ -601,8 +641,27 @@ let RENT_CONTROL_RULES = [
   },
   {
     id: 'RCR-004',
-    name: 'Legacy portfolio caps',
-    scope: { communityIds: ['WCC-009', 'WCC-012'], bedTypes: 'all', unitIds: 'all' },
+    name: 'Windsor Old Fourth Ward 2-bed cap',
+    scope: { communityIds: ['WCC-007'], bedTypes: ['2 Bed'], unitIds: 'all' },
+    formula: { type: 'flat_dollar', value: 125 },
+    ceiling: null,
+    timeframe: '12mo',
+    firstYearProtection: false,
+    noticePeriodDays: 60,
+    buildingAgeExemptionYears: null,
+    vacancyDecontrol: 'none',
+    vacancyBonusPct: null,
+    vacancyMaxTotalPct: null,
+    bankingAllowed: false,
+    bankingMaxMultiplier: null,
+    activeFrom: '2026-02-01T00:00:00.000Z',
+    activeTo: '2026-12-31T00:00:00.000Z',
+    notes: 'Dollar-cap on 2-bed units through year-end; tracks Atlanta inclusionary-zoning overlay.',
+  },
+  {
+    id: 'RCR-005',
+    name: 'Windsor at Pembroke Gardens cap',
+    scope: { communityIds: ['WCC-009'], bedTypes: ['1 Bed', '2 Bed'], unitIds: 'all' },
     formula: { type: 'flat_pct', value: 4 },
     ceiling: null,
     timeframe: '12mo',
@@ -616,7 +675,45 @@ let RENT_CONTROL_RULES = [
     bankingMaxMultiplier: null,
     activeFrom: '2026-01-01T00:00:00.000Z',
     activeTo: null,
-    notes: 'Carried over from the prior management agreement for these two properties.',
+    notes: 'South Florida affordable-housing overlay — applies to 1 and 2-bed units (3-bed units exempt).',
+  },
+  {
+    id: 'RCR-006',
+    name: 'Windsor Addison Park 2-bed cap',
+    scope: { communityIds: ['WCC-011'], bedTypes: ['2 Bed'], unitIds: 'all' },
+    formula: { type: 'flat_pct', value: 6 },
+    ceiling: null,
+    timeframe: '12mo',
+    firstYearProtection: false,
+    noticePeriodDays: 60,
+    buildingAgeExemptionYears: null,
+    vacancyDecontrol: 'none',
+    vacancyBonusPct: null,
+    vacancyMaxTotalPct: null,
+    bankingAllowed: false,
+    bankingMaxMultiplier: null,
+    activeFrom: '2026-01-01T00:00:00.000Z',
+    activeTo: null,
+    notes: 'Charlotte portfolio — legacy 2-bed cap carried from prior management agreement.',
+  },
+  {
+    id: 'RCR-007',
+    name: 'Windsor on White Rock Lake 3-bed cap',
+    scope: { communityIds: ['WCC-002'], bedTypes: ['3 Bed'], unitIds: ['WCC-002-3Bed-001'] },
+    formula: { type: 'flat_pct', value: 5 },
+    ceiling: null,
+    timeframe: '12mo',
+    firstYearProtection: false,
+    noticePeriodDays: 30,
+    buildingAgeExemptionYears: null,
+    vacancyDecontrol: 'none',
+    vacancyBonusPct: null,
+    vacancyMaxTotalPct: null,
+    bankingAllowed: false,
+    bankingMaxMultiplier: null,
+    activeFrom: '2026-02-01T00:00:00.000Z',
+    activeTo: null,
+    notes: 'Single-unit legacy cap on a 3-bed unit at White Rock Lake.',
   },
 ];
 

@@ -40,13 +40,14 @@
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
           Parameters
         </a>
-        <a href="demand.html">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,12 6,7 9,10 14,4"/></svg>
-          Demand Forecast
-        </a>
         <a href="history.html">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 11,10"/></svg>
           Lease History
+        </a>
+        <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+        <a href="login.html" style="color:var(--text-secondary);">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 3H3v10h4"/><path d="M10 11l3-3-3-3"/><line x1="13" y1="8" x2="6.5" y2="8"/></svg>
+          Log out
         </a>
       </div>
     </div>
@@ -224,6 +225,20 @@
         <div class="adv-section-title">Unit details</div>
         <select class="adv-full-select"><option value="">Unit type</option><option>1 Bed</option><option>2 Bed</option><option>3 Bed</option></select>
         <select class="adv-full-select"><option value="">Attributes</option><option>Walk-in closet</option><option>Balcony</option><option>Pool view</option></select>
+      </div>
+
+      <div class="adv-section">
+        <div class="adv-section-title">Unit Status</div>
+        <div style="display:flex;gap:12px;">
+          <label class="ms-option" style="display:inline-flex;align-items:center;gap:6px;">
+            <input type="checkbox" id="statusVacant" onchange="renderTable()">
+            <span>Vacant</span>
+          </label>
+          <label class="ms-option" style="display:inline-flex;align-items:center;gap:6px;">
+            <input type="checkbox" id="statusOnNotice" onchange="renderTable()">
+            <span>On Notice</span>
+          </label>
+        </div>
       </div>
 
       <div class="adv-section">
@@ -725,8 +740,11 @@ function computeNetEff(newRecRent, unitOrConcsAmt) {
     ?.find(c => c.id === unit.commId)
     ?.bedTypes.find(b => b.type === unit.bedType)
     ?.units.find(u => u.id === unit.id);
+  // Only net-effective concessions reduce the tenant's monthly cost.
+  // Gross-up concessions inflate the advertised rent but leave net eff
+  // unchanged (math: gross = target + impact, so net = gross - impact = target).
   const monthlyConcs = (concUnit?.allApplicableConcessions ?? [])
-    .filter(c => c.status === 'Active' && c.monthly);
+    .filter(c => c.status === 'Active' && c.monthly && c.applyTo !== 'gross');
   const totalMonthly = monthlyConcs.reduce((s, c) => s + c.displayAmount, 0);
   return Math.max(0, newRecRent - totalMonthly);
 }
@@ -1401,6 +1419,8 @@ function renderTable() {
       });
 
       const floorplanF = document.getElementById('floorplanFilter')?.value;
+      const vacantOn   = document.getElementById('statusVacant')?.checked;
+      const onNoticeOn = document.getElementById('statusOnNotice')?.checked;
       const filteredUnits = sorted.filter(unit => {
         if (unitIdQuery && !unit.id.toLowerCase().includes(unitIdQuery)) return false;
         if (availRangeStart && availRangeEnd && unit.availDate) {
@@ -1409,6 +1429,11 @@ function renderTable() {
           if (ud < availRangeStart || ud > availRangeEnd) return false;
         }
         if (floorplanF && unit.floorplan !== floorplanF) return false;
+        // Unit Status filter: both unchecked = show all; otherwise match one of the selected statuses.
+        if (vacantOn || onNoticeOn) {
+          const ok = (vacantOn && unit.status === 'vacant') || (onNoticeOn && unit.status === 'on notice');
+          if (!ok) return false;
+        }
         return true;
       });
 
@@ -1717,17 +1742,45 @@ function renderCharts(baseRent) {
     data: {
       labels,
       datasets: [
-        // Order matters for fill: floor → median → ceiling so '+1'/'-1' shade between them
+        // Corridor band (ceiling → floor), rendered first so dashed edges and medians draw on top
+        {
+          label: 'Comp Corridor',
+          data: pricingSeries.map(d => d.compCeiling),
+          borderColor: 'transparent',
+          borderWidth: 0,
+          pointRadius: 0,
+          tension: 0,
+          fill: { target: 1 },
+          backgroundColor: 'rgba(255,255,255,0.08)',
+        },
+        {
+          label: 'Comp Corridor Lower',
+          data: pricingSeries.map(d => d.compFloor),
+          borderColor: 'transparent',
+          borderWidth: 0,
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+        },
         {
           label: 'Comp Floor',
           data: pricingSeries.map(d => d.compFloor),
-          borderColor: 'rgba(232,0,125,0.3)',
-          borderWidth: 1,
+          borderColor: 'rgba(148,163,184,0.5)',
+          borderWidth: 1.5,
           borderDash: [4,3],
           pointRadius: 0,
           tension: 0,
-          fill: '+1',
-          backgroundColor: 'rgba(232,0,125,0.05)',
+          fill: false,
+        },
+        {
+          label: 'Comp Ceiling',
+          data: pricingSeries.map(d => d.compCeiling),
+          borderColor: 'rgba(148,163,184,0.5)',
+          borderWidth: 1.5,
+          borderDash: [4,3],
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
         },
         {
           label: 'Windsor Median',
@@ -1737,17 +1790,6 @@ function renderCharts(baseRent) {
           pointRadius: 0,
           tension: 0,
           fill: false,
-        },
-        {
-          label: 'Comp Ceiling',
-          data: pricingSeries.map(d => d.compCeiling),
-          borderColor: 'rgba(232,0,125,0.3)',
-          borderWidth: 1,
-          borderDash: [4,3],
-          pointRadius: 0,
-          tension: 0,
-          fill: '-1',
-          backgroundColor: 'rgba(232,0,125,0.05)',
         },
         {
           label: 'Competitor Median',
@@ -2133,11 +2175,13 @@ function openConcInfoModal(scope,commId,bedType,unitId){
   const emptyEl=document.getElementById('concInfoEmpty');const tableEl=document.getElementById('concInfoTable');
   if(!active.length){emptyEl.style.display='block';tableEl.style.display='none';document.getElementById('concInfoTotal').textContent='-$0';document.getElementById('concInfoTotalPct').textContent='(0%)';document.getElementById('concInfoNetEff').textContent='$'+baseRent.toLocaleString();openModal('concInfoModal');return;}
   emptyEl.style.display='none';tableEl.style.display='table';
-  const totalAmt=active.reduce((s,c)=>s+c.displayAmount,0);const totalPct=baseRent>0?parseFloat((totalAmt/baseRent*100).toFixed(1)):0;const netEff=Math.max(0,baseRent-totalAmt);
+  const totalAmt=active.filter(c=>c.applyTo!=='gross').reduce((s,c)=>s+c.displayAmount,0);const totalPct=baseRent>0?parseFloat((totalAmt/baseRent*100).toFixed(1)):0;const netEff=Math.max(0,baseRent-totalAmt);
   const lc={community:{l:'COMMUNITY',bg:'rgba(167,139,250,0.15)',c:'#6d28d9'},bedtype:{l:'BED TYPE',bg:'rgba(96,165,250,0.12)',c:'#1d4ed8'},unit:{l:'UNIT',bg:'rgba(232,0,125,0.1)',c:'var(--accent)'}};
   const ltc={'New Lease':{bg:'rgba(232,0,125,0.08)',c:'var(--accent)'},'Renewal':{bg:'rgba(96,165,250,0.1)',c:'#1d4ed8'},'Both':{bg:'rgba(148,163,184,0.1)',c:'#475569'}};
   const stc={'Active':{bg:'rgba(74,222,128,0.12)',c:'#15803d'},'Paused':{bg:'rgba(148,163,184,0.12)',c:'#475569'},'Expired':{bg:'rgba(148,163,184,0.1)',c:'#6b7280'}};
-  document.getElementById('concInfoBody').innerHTML=active.map(c=>{const l=lc[c.level]||lc.unit;const lt=ltc[c.leaseType]||ltc.Both;const s=stc[c.status]||stc.Active;const amtD=c.valueType==='relative'?c.value+'% (\u2248$'+c.displayAmount+')':c.valueType==='free_period'?c.value+' mo. free (\u2248$'+c.displayAmount+'/mo)':'$'+c.displayAmount;const pctD=baseRent>0?parseFloat((c.displayAmount/baseRent*100).toFixed(1))+'%':'\u2014';const lvlHtml=c.level==='bedtype'&&c.bedType?`<span style="background:${l.bg};color:${l.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;display:block;">${l.l}</span><span style="font-size:10px;color:var(--text-muted);margin-top:2px;display:block;">${c.bedType}</span>`:`<span style="background:${l.bg};color:${l.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">${l.l}</span>`;return`<tr style="border-bottom:1px solid var(--border);"><td>${lvlHtml}</td><td style="font-weight:500;">${c.type}</td><td style="font-weight:600;">${amtD}</td><td style="text-align:center;color:var(--text-secondary);">${pctD}</td><td><span style="background:${lt.bg};color:${lt.c};font-size:10px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.leaseType}</span></td><td style="font-size:11.5px;color:var(--text-secondary);white-space:nowrap;">${c.startDate} \u2192 ${c.endDate}</td><td><span style="background:${s.bg};color:${s.c};font-size:11px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.status}</span></td><td style="text-align:center;font-size:13px;">${c.stackable?'<span style="color:#15803d;">\u2713</span>':'<span style="color:#e05252;">\u2717</span>'}</td><td style="text-align:center;"><span style="background:var(--body-bg);border:1px solid var(--border-mid);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;cursor:help;" title="Priority ${c.priority} \u2014 ${c.stackable?'stackable with other concessions':'non-stackable: overrides lower priority concessions'}">${c.priority}</span></td></tr>`;}).join('');
+  const _typeL=c=>c.valueType==='flat_monthly'?'Flat monthly':c.valueType==='total_dollar'?'Total $':c.valueType==='pct_monthly_rent'?'% of rent':'\u2014';
+  const _amtL=c=>{const mo=c.displayAmount??0;if(c.valueType==='flat_monthly')return '$'+(c.value??0)+'/mo';if(c.valueType==='total_dollar')return '$'+(c.value??0).toLocaleString()+' total (\u2248$'+mo+'/mo)';if(c.valueType==='pct_monthly_rent')return (c.value??0)+'% of rent (\u2248$'+mo+'/mo)';return '$'+mo;};
+  document.getElementById('concInfoBody').innerHTML=active.map(c=>{const l=lc[c.level]||lc.unit;const lt=ltc[c.leaseType]||ltc.Both;const s=stc[c.status]||stc.Active;const amtD=_amtL(c);const pctD=baseRent>0?parseFloat((c.displayAmount/baseRent*100).toFixed(1))+'%':'\u2014';const lvlHtml=c.level==='bedtype'&&c.bedType?`<span style="background:${l.bg};color:${l.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;display:block;">${l.l}</span><span style="font-size:10px;color:var(--text-muted);margin-top:2px;display:block;">${c.bedType}</span>`:`<span style="background:${l.bg};color:${l.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">${l.l}</span>`;return`<tr style="border-bottom:1px solid var(--border);"><td>${lvlHtml}</td><td style="font-weight:500;">${_typeL(c)}${c.applyTo==='gross'?' <span style="font-size:9px;color:var(--text-muted);font-weight:400;">&middot; gross-up</span>':''}</td><td style="font-weight:600;">${amtD}</td><td style="text-align:center;color:var(--text-secondary);">${pctD}</td><td><span style="background:${lt.bg};color:${lt.c};font-size:10px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.leaseType}</span></td><td style="font-size:11.5px;color:var(--text-secondary);white-space:nowrap;">${c.startDate} \u2192 ${c.endDate}</td><td><span style="background:${s.bg};color:${s.c};font-size:11px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.status}</span></td><td style="text-align:center;font-size:13px;">${c.stackable?'<span style="color:#15803d;">\u2713</span>':'<span style="color:#e05252;">\u2717</span>'}</td><td style="text-align:center;"><span style="background:var(--body-bg);border:1px solid var(--border-mid);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;cursor:help;" title="Priority ${c.priority} \u2014 ${c.stackable?'stackable with other concessions':'non-stackable: overrides lower priority concessions'}">${c.priority}</span></td></tr>`;}).join('');
   document.getElementById('concInfoTotal').textContent='-$'+totalAmt;document.getElementById('concInfoTotalPct').textContent='('+totalPct+'% of rent)';document.getElementById('concInfoNetEff').textContent='$'+netEff.toLocaleString();
   openModal('concInfoModal');
 }

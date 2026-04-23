@@ -269,5 +269,190 @@
     getRange() { return { start: this.start, end: this.end }; }
   }
 
-  window.DateRangePicker = DateRangePicker;
+  // Single-date variant. Reuses the same .avail-range-picker styling and the
+  // single-month calendar visuals from the range picker, but commits on a
+  // single click and tracks one date.
+  //
+  // Usage:
+  //   const picker = new SingleDatePicker({
+  //     trigger:     document.getElementById('myBtn'),
+  //     labelEl:     document.getElementById('myBtnLabel'),
+  //     placeholder: 'Select date',
+  //     onChange:    (date) => { ... },
+  //   });
+  //
+  //   picker.setDate(new Date());     // silent
+  //   picker.getDate();
+  //   picker.clear();                 // fires onChange(null)
+  class SingleDatePicker {
+    constructor(opts) {
+      this.trigger     = opts.trigger;
+      this.labelEl     = opts.labelEl || opts.trigger;
+      this.placeholder = opts.placeholder || 'Select date';
+      this.onChange    = opts.onChange || (() => {});
+      this.date        = null;
+      this._built      = false;
+
+      const now = new Date();
+      this.year  = now.getFullYear();
+      this.month = now.getMonth();
+
+      this.trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!this._built) this._buildPicker();
+        this._toggle();
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!this._built || !this.picker.classList.contains('open')) return;
+        if (e.target.closest('.avail-range-picker') || this.trigger.contains(e.target)) return;
+        this._close();
+      });
+
+      this._updateLabel();
+    }
+
+    _buildPicker() {
+      const el = document.createElement('div');
+      el.className = 'avail-range-picker';
+      el.addEventListener('click', (e) => e.stopPropagation());
+      // Single-month variant — use a single calendar column with prev / label / next controls in the header.
+      el.innerHTML = `
+        <div class="ar-calendars" style="grid-template-columns:1fr;">
+          <div class="ar-cal">
+            <div class="ar-cal-header">
+              <button type="button" class="calendar-nav" data-nav="-1">
+                <svg viewBox="0 0 10 10" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="7,1 3,5 7,9"/></svg>
+              </button>
+              <span class="calendar-month" data-month-label="1"></span>
+              <button type="button" class="calendar-nav" data-nav="1">
+                <svg viewBox="0 0 10 10" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,1 7,5 3,9"/></svg>
+              </button>
+            </div>
+            <div class="ar-weekdays"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span></div>
+            <div class="ar-days" data-days="1"></div>
+          </div>
+        </div>
+        <div class="ar-footer">
+          <span class="ar-range-text"></span>
+          <button type="button" class="btn btn-ghost" data-clear style="padding:5px 12px;font-size:11px;">Clear</button>
+        </div>`;
+      document.body.appendChild(el);
+      el.querySelectorAll('[data-nav]').forEach((b) =>
+        b.addEventListener('click', () => this._nav(parseInt(b.dataset.nav, 10)))
+      );
+      el.querySelector('[data-clear]').addEventListener('click', () => {
+        this.clear();
+        this._close();
+      });
+      this.picker = el;
+      this._built = true;
+    }
+
+    _toggle() {
+      if (this.picker.classList.contains('open')) this._close();
+      else this._open();
+    }
+
+    _open() {
+      if (this.date) {
+        this.year  = this.date.getFullYear();
+        this.month = this.date.getMonth();
+      }
+      this._render();
+      const r = this.trigger.getBoundingClientRect();
+      this.picker.style.top   = (r.bottom + 4) + 'px';
+      this.picker.style.left  = r.left + 'px';
+      this.picker.style.right = 'auto';
+      this.picker.classList.add('open');
+    }
+
+    _close() {
+      if (!this._built) return;
+      this.picker.classList.remove('open');
+    }
+
+    _nav(dir) {
+      this.month += dir;
+      if (this.month > 11) { this.month = 0;  this.year++; }
+      if (this.month < 0)  { this.month = 11; this.year--; }
+      this._render();
+    }
+
+    _render() {
+      this.picker.querySelector('[data-month-label="1"]').textContent = MONTH_LONG[this.month] + ' ' + this.year;
+      this.picker.querySelector('[data-days="1"]').innerHTML = this._buildGrid(this.year, this.month);
+      this._wireDayInteractions();
+      this._updateFooter();
+    }
+
+    _buildGrid(yr, mo) {
+      const firstDay = new Date(yr, mo, 1).getDay();
+      const dim      = new Date(yr, mo + 1, 0).getDate();
+      const today    = new Date(); today.setHours(0, 0, 0, 0);
+      let html = '';
+      for (let i = 0; i < firstDay; i++) html += '<span class="ar-day empty"></span>';
+      for (let d = 1; d <= dim; d++) {
+        const dt = new Date(yr, mo, d);
+        let cls = 'ar-day';
+        if (dt.getTime() === today.getTime()) cls += ' today';
+        if (this.date && dt.getTime() === this.date.getTime()) cls += ' range-start range-end';
+        html += `<span class="${cls}" data-y="${yr}" data-m="${mo}" data-d="${d}">${d}</span>`;
+      }
+      return html;
+    }
+
+    _wireDayInteractions() {
+      this.picker.querySelectorAll('.ar-day:not(.empty)').forEach((span) => {
+        span.addEventListener('click', () => {
+          this._pickDay(+span.dataset.y, +span.dataset.m, +span.dataset.d);
+        });
+      });
+    }
+
+    _pickDay(yr, mo, d) {
+      this.date = new Date(yr, mo, d);
+      this._updateLabel();
+      this._close();
+      this.onChange(this.date);
+    }
+
+    _updateFooter() {
+      const el = this.picker.querySelector('.ar-range-text');
+      el.textContent = this.date ? fmtFooterLabel(this.date) : 'Select date';
+    }
+
+    _updateLabel() {
+      if (!this.labelEl) return;
+      if (this.date) {
+        this.labelEl.textContent = fmtTriggerLabel(this.date);
+        this.trigger.classList.remove('is-placeholder');
+      } else {
+        this.labelEl.textContent = this.placeholder;
+        this.trigger.classList.add('is-placeholder');
+      }
+    }
+
+    setDate(date) {
+      this.date = date || null;
+      if (this.date) {
+        this.year  = this.date.getFullYear();
+        this.month = this.date.getMonth();
+      }
+      this._updateLabel();
+      if (this._built && this.picker.classList.contains('open')) this._render();
+    }
+
+    clear() {
+      this.date = null;
+      this._updateLabel();
+      if (this._built) this._render();
+      this.onChange(null);
+    }
+
+    getDate() { return this.date; }
+  }
+
+  window.DateRangePicker  = DateRangePicker;
+  window.SingleDatePicker = SingleDatePicker;
 })();

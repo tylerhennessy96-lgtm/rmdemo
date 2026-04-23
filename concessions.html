@@ -7,6 +7,71 @@
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <script src="data.js"></script>
+  <script src="date-picker.js"></script>
+  <style>
+    /* Concession form — date-picker trigger styled to match the other
+       inputs in the form. Borrowed from .hist-date-trigger on history.html. */
+    .conc-date-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--text-primary);
+      background: var(--surface);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color .12s;
+    }
+    .conc-date-trigger:hover { border-color: var(--accent); }
+    .conc-date-trigger.is-placeholder { color: var(--text-muted); }
+    .conc-date-trigger svg { color: var(--text-muted); flex-shrink: 0; }
+    /* Lease-term pills for the concession form. Selected = pink fill; idle = neutral. */
+    .conc-term-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border-mid);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 500;
+      background: var(--surface);
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+      transition: all .12s;
+    }
+    .conc-term-pill input { margin: 0; accent-color: #fff; }
+    .conc-term-pill:hover { border-color: var(--accent); }
+    .conc-term-pill.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    /* Conditional input under each radio option */
+    .conc-radio-input {
+      display: none;
+      margin-top: 8px;
+      margin-left: 26px;
+      align-items: center;
+      gap: 8px;
+    }
+    .conc-radio-input.open { display: flex; }
+    .conc-radio-input input[type="number"] {
+      width: 120px;
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius);
+      padding: 6px 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      outline: none;
+    }
+  </style>
 </head>
 <body>
 <div class="app">
@@ -20,7 +85,7 @@
     </a>
     <div class="nav-tabs"><a href="pricing.html" class="nav-tab">Pricing</a><a href="expiration.html" class="nav-tab">Expiration Management</a><a href="term.html" class="nav-tab">Term Management</a><a href="concessions.html" class="nav-tab active">Concession Management</a><a href="rent-control.html" class="nav-tab">Rent Control</a></div>
     <div class="nav-divider"></div>
-    <div style="position:relative;"><button class="nav-menu-btn" id="menuBtn" onclick="toggleMenu()"><span></span><span></span><span></span></button><div class="nav-dropdown" id="navDropdown"><a href="parameters.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>Parameters</a><a href="demand.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,12 6,7 9,10 14,4"/></svg>Demand Forecast</a><a href="history.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 11,10"/></svg>Lease History</a></div></div>
+    <div style="position:relative;"><button class="nav-menu-btn" id="menuBtn" onclick="toggleMenu()"><span></span><span></span><span></span></button><div class="nav-dropdown" id="navDropdown"><a href="parameters.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>Parameters</a><a href="history.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 11,10"/></svg>Lease History</a><div style="height:1px;background:var(--border);margin:4px 0;"></div><a href="login.html" style="color:var(--text-secondary);"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 3H3v10h4"/><path d="M10 11l3-3-3-3"/><line x1="13" y1="8" x2="6.5" y2="8"/></svg>Log out</a></div></div>
   </nav>
   <div class="filter-bar" id="filterBar"></div>
   <div class="subtab-bar">
@@ -72,8 +137,27 @@
 <script>
 let expandedConcProps=new Set();let expandedConcBedTypes={};let currentTab='overview';let unitConcPanelOpen=false;
 let selectedMgmtCommId=null;let selectedMgmtBedType=null;let selectedMgmtUnitId=null;let expandedMgmtComms=new Set();let expandedMgmtBedTypes=new Set();let editingConcessionId=null;
-let selectedValueType=0;let selectedLeaseType=2;let selectedAutoLeaseType=2;
+let selectedLeaseType=2;let selectedAutoLeaseType=2;
 function getUrlParams(){const p=new URLSearchParams(window.location.search);return{tab:p.get('tab'),commId:p.get('commId'),bedType:p.get('bedType'),unitId:p.get('unitId')};}
+
+// Display helpers for the new concession shape. Every concession renders
+// with a short type tag and an amount string that respects its valueType.
+function _concTypeLabel(c) {
+  if (c.valueType === 'flat_monthly')     return 'Flat monthly';
+  if (c.valueType === 'total_dollar')     return 'Total $';
+  if (c.valueType === 'pct_monthly_rent') return '% of rent';
+  return '—';
+}
+function _concAmountLabel(c) {
+  const mo = c.displayAmount ?? 0;
+  if (c.valueType === 'flat_monthly')     return '$' + (c.value ?? 0) + '/mo';
+  if (c.valueType === 'total_dollar')     return '$' + (c.value ?? 0).toLocaleString() + ' total (≈$' + mo + '/mo)';
+  if (c.valueType === 'pct_monthly_rent') return (c.value ?? 0) + '% of rent (≈$' + mo + '/mo)';
+  return '$' + mo;
+}
+function _concApplyToLabel(c) {
+  return c.applyTo === 'gross' ? 'Gross' : 'Net Eff.';
+}
 
 function toggleMenu(){document.getElementById('navDropdown').classList.toggle('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.nav-menu-btn')&&!e.target.closest('.nav-dropdown'))document.getElementById('navDropdown').classList.remove('open');});
@@ -238,8 +322,8 @@ function openUnitConcessionPanel(unitId,commId,bedType){
   unit.allApplicableConcessions.filter(c=>c.status==='Active').forEach(c=>{
     const inherited=c.level!=='unit';
     list+=`<div style="background:var(--body-bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">${lvlBdg[c.level]}<span style="font-weight:500;font-size:12px;">${c.type}</span>${!c.stackable?'<span style="font-size:9px;color:#f5a623;margin-left:auto;">non-stackable</span>':''}</div>
-      <div style="font-size:13px;font-weight:600;color:var(--accent);">-$${c.displayAmount}<span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:4px;">${c.valueType==='relative'?c.value+'%':c.valueType==='free_period'?c.value+'mo free':'flat'}</span></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">${lvlBdg[c.level]}<span style="font-weight:500;font-size:12px;">${_concTypeLabel(c)}</span>${!c.stackable?'<span style="font-size:9px;color:#f5a623;margin-left:auto;">non-stackable</span>':''}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--accent);">-$${c.displayAmount}<span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:4px;">${_concAmountLabel(c)}${c.applyTo==='gross'?' &middot; gross-up':''}</span></div>
       <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Priority ${c.priority}${inherited?' · inherited':''}</div>
     </div>`;
   });
@@ -247,7 +331,7 @@ function openUnitConcessionPanel(unitId,commId,bedType){
   list+=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;font-weight:600;">Total: -$${unit.totalConcessionAmount} <span style="font-weight:400;color:var(--text-muted);">(${unit.concPctOfRent}% of rent)</span></div>`;
   document.getElementById('unitConcActiveList').innerHTML=list;
   document.getElementById('unitNetEffPreview').textContent='$'+unit.effectiveNetRent.toLocaleString();
-  document.getElementById('unitConcBreakdown').textContent=unit.stackedList.map(c=>c.type+' -$'+c.displayAmount).join(' + ');
+  document.getElementById('unitConcBreakdown').textContent=unit.stackedList.map(c=>_concTypeLabel(c)+' -$'+c.displayAmount).join(' + ');
   document.getElementById('unitConcPanel').classList.add('open');
 }
 function closeUnitConcPanel(){document.getElementById('unitConcPanel').classList.remove('open');}
@@ -272,11 +356,11 @@ function openConcInfoModal(scope,commId,bedType,unitId){
   const tableEl=document.getElementById('concInfoTable');
   if(!active.length){emptyEl.style.display='block';tableEl.style.display='none';document.getElementById('concInfoTotal').textContent='-$0';document.getElementById('concInfoTotalPct').textContent='(0%)';document.getElementById('concInfoNetEff').textContent='$'+baseRent.toLocaleString();openModal('concInfoModal');return;}
   emptyEl.style.display='none';tableEl.style.display='table';
-  const totalAmt=active.reduce((s,c)=>s+c.displayAmount,0);const totalPct=baseRent>0?parseFloat((totalAmt/baseRent*100).toFixed(1)):0;const netEff=Math.max(0,baseRent-totalAmt);
+  const totalAmt=active.filter(c=>c.applyTo!=='gross').reduce((s,c)=>s+c.displayAmount,0);const totalPct=baseRent>0?parseFloat((totalAmt/baseRent*100).toFixed(1)):0;const netEff=Math.max(0,baseRent-totalAmt);
   const lc={community:{l:'COMMUNITY',bg:'rgba(167,139,250,0.15)',c:'#6d28d9'},bedtype:{l:'BED TYPE',bg:'rgba(96,165,250,0.12)',c:'#1d4ed8'},unit:{l:'UNIT',bg:'rgba(232,0,125,0.1)',c:'var(--accent)'}};
   const ltc={'New Lease':{bg:'rgba(232,0,125,0.08)',c:'var(--accent)'},'Renewal':{bg:'rgba(96,165,250,0.1)',c:'#1d4ed8'},'Both':{bg:'rgba(148,163,184,0.1)',c:'#475569'}};
   const stc={'Active':{bg:'rgba(74,222,128,0.12)',c:'#15803d'},'Paused':{bg:'rgba(148,163,184,0.12)',c:'#475569'},'Expired':{bg:'rgba(148,163,184,0.1)',c:'#6b7280'}};
-  document.getElementById('concInfoBody').innerHTML=active.map(c=>{const l=lc[c.level]||lc.unit;const lt=ltc[c.leaseType]||ltc.Both;const s=stc[c.status]||stc.Active;const amtD=c.valueType==='relative'?c.value+'% (\u2248$'+c.displayAmount+')':c.valueType==='free_period'?c.value+' mo. free (\u2248$'+c.displayAmount+'/mo)':'$'+c.displayAmount;const pctD=baseRent>0?parseFloat((c.displayAmount/baseRent*100).toFixed(1))+'%':'\u2014';const lvlHtml=c.level==='bedtype'&&c.bedType?`<span style="background:${l.bg};color:${l.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;display:block;">${l.l}</span><span style="font-size:10px;color:var(--text-muted);margin-top:2px;display:block;">${c.bedType}</span>`:`<span style="background:${l.bg};color:${l.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">${l.l}</span>`;return`<tr style="border-bottom:1px solid var(--border);"><td>${lvlHtml}</td><td style="font-weight:500;">${c.type}</td><td style="font-weight:600;">${amtD}</td><td style="text-align:center;color:var(--text-secondary);">${pctD}</td><td><span style="background:${lt.bg};color:${lt.c};font-size:10px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.leaseType}</span></td><td style="font-size:11.5px;color:var(--text-secondary);white-space:nowrap;">${c.startDate} \u2192 ${c.endDate}</td><td><span style="background:${s.bg};color:${s.c};font-size:11px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.status}</span></td><td style="text-align:center;font-size:13px;">${c.stackable?'<span style="color:#15803d;">\u2713</span>':'<span style="color:#e05252;">\u2717</span>'}</td><td style="text-align:center;"><span style="background:var(--body-bg);border:1px solid var(--border-mid);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;cursor:help;" title="Priority ${c.priority} \u2014 ${c.stackable?'stackable with other concessions':'non-stackable: overrides lower priority concessions'}">${c.priority}</span></td></tr>`;}).join('');
+  document.getElementById('concInfoBody').innerHTML=active.map(c=>{const l=lc[c.level]||lc.unit;const lt=ltc[c.leaseType]||ltc.Both;const s=stc[c.status]||stc.Active;const amtD=_concAmountLabel(c);const pctD=baseRent>0?parseFloat((c.displayAmount/baseRent*100).toFixed(1))+'%':'\u2014';const lvlHtml=c.level==='bedtype'&&c.bedType?`<span style="background:${l.bg};color:${l.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;display:block;">${l.l}</span><span style="font-size:10px;color:var(--text-muted);margin-top:2px;display:block;">${c.bedType}</span>`:`<span style="background:${l.bg};color:${l.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">${l.l}</span>`;return`<tr style="border-bottom:1px solid var(--border);"><td>${lvlHtml}</td><td style="font-weight:500;">${_concTypeLabel(c)}${c.applyTo==='gross'?' <span style="font-size:9px;color:var(--text-muted);font-weight:400;">&middot; gross-up</span>':''}</td><td style="font-weight:600;">${amtD}</td><td style="text-align:center;color:var(--text-secondary);">${pctD}</td><td><span style="background:${lt.bg};color:${lt.c};font-size:10px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.leaseType}</span></td><td style="font-size:11.5px;color:var(--text-secondary);white-space:nowrap;">${c.startDate} \u2192 ${c.endDate}</td><td><span style="background:${s.bg};color:${s.c};font-size:11px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.status}</span></td><td style="text-align:center;font-size:13px;">${c.stackable?'<span style="color:#15803d;">\u2713</span>':'<span style="color:#e05252;">\u2717</span>'}</td><td style="text-align:center;"><span style="background:var(--body-bg);border:1px solid var(--border-mid);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;cursor:help;" title="Priority ${c.priority} \u2014 ${c.stackable?'stackable with other concessions':'non-stackable: overrides lower priority concessions'}">${c.priority}</span></td></tr>`;}).join('');
   document.getElementById('concInfoTotal').textContent='-$'+totalAmt;
   document.getElementById('concInfoTotalPct').textContent='('+totalPct+'% of rent)';
   document.getElementById('concInfoNetEff').textContent='$'+netEff.toLocaleString();
@@ -284,7 +368,7 @@ function openConcInfoModal(scope,commId,bedType,unitId){
 }
 
 // Management Tab
-function getDefaultAutoParams(){return{targetCoverage:25,triggerVacancyDays:14,defaultType:'Fixed Discount',defaultAmount:150,maxCap:500,expireAfterDays:30,applyTo:'Both'};}
+function getDefaultAutoParams(){return{targetCoverage:25,triggerVacancyDays:14,defaultType:'Flat monthly',defaultAmount:150,maxCap:500,expireAfterDays:30,applyTo:'Both'};}
 
 function renderManagementTab(filtered){
   const mc=document.getElementById('mgmtContainer');if(!mc)return;
@@ -341,17 +425,15 @@ function renderMgmtConcRow(c, isInh) {
   const s = sc[c.status] || sc.Active;
   const ltc = {'New Lease':{bg:'rgba(232,0,125,0.08)',c:'var(--accent)'},'Renewal':{bg:'rgba(96,165,250,0.1)',c:'#1d4ed8'},'Both':{bg:'rgba(148,163,184,0.1)',c:'#475569'}};
   const lt = ltc[c.leaseType] || ltc.Both;
-  const amtD = c.valueType === 'relative' ? c.value + '% (\u2248$' + c.displayAmount + ')'
-    : c.valueType === 'free_period' ? c.value + ' mo. free'
-    : c.valueType === 'flat_monthly' ? '$' + c.value + '/mo'
-    : '$' + c.displayAmount;
+  const amtD = _concAmountLabel(c);
+  const typeCell = `${_concTypeLabel(c)}${c.applyTo==='gross'?' <span style="font-size:9px;color:var(--text-muted);font-weight:400;">&middot; gross-up</span>':''}`;
   const excl = [c.excludeAffordable ? 'No AF' : null, c.excludeRC ? 'No RC' : null].filter(Boolean).join(', ') || '\u2014';
   const lvlCfg = {community:{l:'COMM',bg:'rgba(167,139,250,0.15)',c:'#6d28d9'},bedtype:{l:'BED',bg:'rgba(96,165,250,0.12)',c:'#1d4ed8'},unit:{l:'UNIT',bg:'rgba(232,0,125,0.1)',c:'var(--accent)'}};
   const lv = lvlCfg[c.level] || lvlCfg.unit;
   const actionsCell = isInh
     ? '<span style="font-size:11px;color:var(--text-muted);">inherited</span>'
     : `<div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;"><button onclick="editMgmtConc('${c.id}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:'Inter',sans-serif;">Edit</button><button onclick="toggleMgmtPause('${c.id}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 8px;font-size:11px;color:${c.status==='Paused'?'var(--accent)':'var(--text-secondary)'};cursor:pointer;font-family:'Inter',sans-serif;">${c.status==='Paused'?'Resume':'Pause'}</button><button onclick="toggleConcHistory('${c.id}')" style="background:none;border:1px solid var(--border-mid);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:'Inter',sans-serif;">History</button><button onclick="removeMgmtConc('${c.id}')" style="background:none;border:1px solid rgba(248,113,113,0.4);border-radius:4px;padding:3px 8px;font-size:11px;color:#e05252;cursor:pointer;font-family:'Inter',sans-serif;">Remove</button></div>`;
-  const main = `<tr style="border-bottom:1px solid var(--border);opacity:${isInh?'.65':'1'};"><td><span style="background:${lv.bg};color:${lv.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">${lv.l}</span></td><td style="font-weight:500;">${c.type}</td><td style="font-weight:600;color:var(--accent);">${amtD}</td><td><span style="background:${lt.bg};color:${lt.c};font-size:10px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.leaseType}</span></td><td style="font-size:11.5px;color:var(--text-secondary);white-space:nowrap;">${c.startDate} \u2192 ${c.endDate}</td><td style="text-align:center;font-size:13px;">${c.stackable?'<span style="color:#15803d;">\u2713</span>':'<span style="color:#e05252;">\u2717</span>'}</td><td style="text-align:center;"><span style="background:var(--body-bg);border:1px solid var(--border-mid);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;">${c.priority}</span></td><td style="font-size:11.5px;color:var(--text-secondary);">${excl}</td><td><span style="background:${s.bg};color:${s.c};font-size:11px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.status}</span></td><td style="text-align:center;">${actionsCell}</td></tr>`;
+  const main = `<tr style="border-bottom:1px solid var(--border);opacity:${isInh?'.65':'1'};"><td><span style="background:${lv.bg};color:${lv.c};font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;">${lv.l}</span></td><td style="font-weight:500;">${typeCell}</td><td style="font-weight:600;color:var(--accent);">${amtD}</td><td><span style="background:${lt.bg};color:${lt.c};font-size:10px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.leaseType}</span></td><td style="font-size:11.5px;color:var(--text-secondary);white-space:nowrap;">${c.startDate} \u2192 ${c.endDate}</td><td style="text-align:center;font-size:13px;">${c.stackable?'<span style="color:#15803d;">\u2713</span>':'<span style="color:#e05252;">\u2717</span>'}</td><td style="text-align:center;"><span style="background:var(--body-bg);border:1px solid var(--border-mid);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;">${c.priority}</span></td><td style="font-size:11.5px;color:var(--text-secondary);">${excl}</td><td><span style="background:${s.bg};color:${s.c};font-size:11px;font-weight:500;border-radius:10px;padding:2px 7px;">${c.status}</span></td><td style="text-align:center;">${actionsCell}</td></tr>`;
   if (isInh) return main;
   const createdLine = `<span>Created by <strong style="color:var(--text-primary);">${c.createdBy ?? 'Unknown'}</strong>${c.createdAt ? ' on ' + c.createdAt : ''}</span>${c.editedBy ? `<span style="color:var(--text-muted);">·</span><span>Last edited by <strong style="color:var(--text-primary);">${c.editedBy}</strong>${c.editedAt ? ' on ' + c.editedAt : ''}</span>` : ''}`;
   const histLog = (c.history && c.history.length > 0)
@@ -414,20 +496,7 @@ function renderMgmtPanel(){
         </div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Community and bed type concessions are managed at their respective levels.</div>`}
       </div>
-      <div id="addConcForm" style="display:none;margin-bottom:28px;">
-        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;"><span id="addConcFormTitle">New Unit Concession</span></div>
-        <div style="background:var(--body-bg);border-radius:10px;border:1px solid var(--border);padding:18px 20px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-            <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Concession Type</div><select id="fc_type" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12.5px;background:var(--surface);outline:none;appearance:none;">${CONCESSION_TYPE_OPTIONS.map(t=>`<option>${t}</option>`).join('')}</select></div>
-            <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Value Type</div><select id="fc_valueType" onchange="onValueTypeChange()" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12.5px;background:var(--surface);outline:none;appearance:none;">${CONCESSION_VALUE_TYPES.map(vt=>`<option value="${vt.id}">${vt.label}</option>`).join('')}</select></div><div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;" id="fc_valueLabel">Amount ($)</div><input type="number" id="fc_value" oninput="updateConcPreview()" placeholder="0" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;outline:none;"></div>
-            <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Applies to</div><div style="display:flex;border:1px solid var(--border-mid);border-radius:var(--radius);overflow:hidden;">${['New Lease','Renewal','Both'].map((lt,i)=>`<button id="ltype_${i}" onclick="setLeaseType(${i})" style="flex:1;padding:7px 8px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:11.5px;background:${i===2?'var(--accent)':'var(--surface)'};color:${i===2?'#fff':'var(--text-secondary)'};font-weight:${i===2?'600':'400'};">${lt}</button>`).join('')}</div></div>
-            <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Stacking</div><div style="display:flex;gap:10px;align-items:center;"><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_stackable" checked style="accent-color:var(--accent);">Stackable</label><div style="display:flex;align-items:center;gap:6px;margin-left:auto;"><span style="font-size:12px;color:var(--text-secondary);">Priority</span><input type="number" id="fc_priority" value="5" min="1" style="width:52px;border:1px solid var(--border-mid);border-radius:var(--radius);padding:5px 8px;font-family:'Inter',sans-serif;font-size:12px;text-align:center;outline:none;"></div></div></div>
-            <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Offer Start</div><input type="date" id="fc_startDate" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;outline:none;color:var(--text-primary);"></div>
-            <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Offer End</div><input type="date" id="fc_endDate" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;outline:none;color:var(--text-primary);"></div>
-          </div>
-          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);"><button onclick="cancelConcForm()" class="btn btn-ghost" style="font-size:12px;">Cancel</button><button onclick="saveUnitConc()" class="btn btn-primary" style="font-size:12px;"><span id="saveConcBtnLabel">Save Concession</span></button></div>
-        </div>
-      </div>
+      ${_buildConcFormHtml({ includeExclude: false, saveFn: 'saveUnitConc', defaultTitle: 'New Unit Concession' })}
       <div style="margin-bottom:28px;"><div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">Unit Details</div>
         <div style="background:var(--body-bg);border-radius:10px;border:1px solid var(--border);padding:16px 20px;">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
@@ -458,21 +527,7 @@ function renderMgmtPanel(){
       ${scopeConcs.length===0?'<div style="padding:16px;background:var(--body-bg);border-radius:8px;border:1px dashed var(--border-mid);text-align:center;color:var(--text-muted);font-size:12.5px;">No concessions configured at this level</div>':`<table class="data-table" style="margin-bottom:0;"><thead><tr><th style="min-width:70px;">Level</th><th>Type</th><th>Value</th><th>Lease Type</th><th>Valid Period</th><th style="text-align:center;">Stackable</th><th style="text-align:center;">Priority</th><th>Exclusions</th><th>Status</th><th style="text-align:center;">Actions</th></tr></thead><tbody>${scopeConcs.map(c=>renderMgmtConcRow(c,false)).join('')}</tbody></table>`}
       ${inheritedConcs.length>0?`<div style="margin-top:14px;"><div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Inherited from community level <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;">(read-only)</span></div><table class="data-table" style="opacity:.7;"><tbody>${inheritedConcs.map(c=>renderMgmtConcRow(c,true)).join('')}</tbody></table></div>`:''}
     </div>
-    <div id="addConcForm" style="display:none;margin-bottom:28px;">
-      <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;"><span id="addConcFormTitle">New Concession</span></div>
-      <div style="background:var(--body-bg);border-radius:10px;border:1px solid var(--border);padding:18px 20px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Concession Type</div><select id="fc_type" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12.5px;background:var(--surface);outline:none;appearance:none;">${CONCESSION_TYPE_OPTIONS.map(t=>`<option>${t}</option>`).join('')}</select></div>
-          <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Value Type</div><select id="fc_valueType" onchange="onValueTypeChange()" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12.5px;background:var(--surface);outline:none;appearance:none;">${CONCESSION_VALUE_TYPES.map(vt=>`<option value="${vt.id}">${vt.label}</option>`).join('')}</select></div><div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;" id="fc_valueLabel">Amount ($)</div><input type="number" id="fc_value" oninput="updateConcPreview()" placeholder="0" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;outline:none;"></div>
-          <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Applies to</div><div style="display:flex;border:1px solid var(--border-mid);border-radius:var(--radius);overflow:hidden;">${['New Lease','Renewal','Both'].map((lt,i)=>`<button id="ltype_${i}" onclick="setLeaseType(${i})" style="flex:1;padding:7px 8px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:11.5px;background:${i===2?'var(--accent)':'var(--surface)'};color:${i===2?'#fff':'var(--text-secondary)'};font-weight:${i===2?'600':'400'};">${lt}</button>`).join('')}</div></div>
-          <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Stacking</div><div style="display:flex;gap:10px;align-items:center;"><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_stackable" checked style="accent-color:var(--accent);">Stackable</label><div style="display:flex;align-items:center;gap:6px;margin-left:auto;"><span style="font-size:12px;color:var(--text-secondary);">Priority</span><input type="number" id="fc_priority" value="1" min="1" style="width:52px;border:1px solid var(--border-mid);border-radius:var(--radius);padding:5px 8px;font-family:'Inter',sans-serif;font-size:12px;text-align:center;outline:none;"></div></div></div>
-          <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Offer Start</div><input type="date" id="fc_startDate" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;outline:none;color:var(--text-primary);"></div>
-          <div><div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">Offer End</div><input type="date" id="fc_endDate" style="width:100%;border:1px solid var(--border-mid);border-radius:var(--radius);padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;outline:none;color:var(--text-primary);"></div>
-        </div>
-        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:20px;align-items:center;"><span style="font-size:12px;color:var(--text-secondary);font-weight:500;">Exclude:</span><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_excludeAF" style="accent-color:var(--accent);">Affordable (AF)</label><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_excludeRC" style="accent-color:var(--accent);">Rent Controlled (RC)</label></div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);"><button onclick="cancelConcForm()" class="btn btn-ghost" style="font-size:12px;">Cancel</button><button onclick="saveMgmtConc()" class="btn btn-primary" style="font-size:12px;"><span id="saveConcBtnLabel">Save Concession</span></button></div>
-      </div>
-    </div>
+    ${_buildConcFormHtml({ includeExclude: true, saveFn: 'saveMgmtConc', defaultTitle: 'New Concession' })}
     <div style="margin-bottom:28px;"><div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">Automated Concession Parameters</div>
       <div style="background:var(--body-bg);border-radius:10px;border:1px solid var(--border);padding:18px 20px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
@@ -488,74 +543,241 @@ function renderMgmtPanel(){
     </div>`;
 }
 
-// Form functions
-let selectedApplication = 'discount';
+// ── New/Edit Concession form ─────────────────────────────────────────
+// Live form state. The form markup is re-injected on every renderMgmtPanel
+// call, so these variables hold the canonical selection and are re-synced
+// to the DOM via setConcValueType / setConcApplyTo / setLeaseType / pills.
+let selectedConcValueType = 'flat_monthly';   // 'flat_monthly' | 'total_dollar' | 'pct_monthly_rent'
+let selectedConcApplyTo   = 'net_eff';        // 'net_eff' | 'gross'
+let selectedConcTerms     = new Set();        // Set<number> — months in applicableLeaseTerms
+let _concStartPicker      = null;
+let _concEndPicker        = null;
 
-function setValueTypeId(id) {
-  const sel = document.getElementById('fc_valueType');
-  if (sel) sel.value = id;
-  onValueTypeChange();
+// Returns the full form HTML as a template string. Called twice by
+// renderMgmtPanel: unit scope (no Exclude row) and community/bedtype scope.
+function _buildConcFormHtml({ includeExclude, saveFn, defaultTitle }) {
+  const dateIcon = `<svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="11" height="10" rx="1"/><line x1="1.5" y1="5.5" x2="12.5" y2="5.5"/><line x1="4.5" y1="1" x2="4.5" y2="4"/><line x1="9.5" y1="1" x2="9.5" y2="4"/></svg>`;
+  return `
+    <div id="addConcForm" style="display:none;margin-bottom:28px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;"><span id="addConcFormTitle">${defaultTitle}</span></div>
+      <div style="background:var(--body-bg);border-radius:10px;border:1px solid var(--border);padding:18px 20px;">
+
+        <!-- 1. Concession Type (three radios with conditional input) -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;font-weight:600;">Concession Type</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+              <input type="radio" name="fc_valueType" value="flat_monthly" onchange="setConcValueType('flat_monthly')" style="accent-color:var(--accent);">
+              <span>Flat monthly</span>
+            </label>
+            <div id="fc_input_flat_monthly" class="conc-radio-input">
+              <span style="color:var(--text-secondary);font-size:13px;font-weight:500;">$</span>
+              <input type="number" id="fc_val_flat_monthly" min="0" step="1" placeholder="150">
+              <span style="color:var(--text-muted);font-size:12px;">per month</span>
+            </div>
+
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+              <input type="radio" name="fc_valueType" value="total_dollar" onchange="setConcValueType('total_dollar')" style="accent-color:var(--accent);">
+              <span>Total $ amount</span>
+            </label>
+            <div id="fc_input_total_dollar" class="conc-radio-input">
+              <span style="color:var(--text-secondary);font-size:13px;font-weight:500;">$</span>
+              <input type="number" id="fc_val_total_dollar" min="0" step="1" placeholder="1500">
+              <span style="color:var(--text-muted);font-size:12px;">total over lease</span>
+            </div>
+
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+              <input type="radio" name="fc_valueType" value="pct_monthly_rent" onchange="setConcValueType('pct_monthly_rent')" style="accent-color:var(--accent);">
+              <span>Total amount as % of monthly rent</span>
+            </label>
+            <div id="fc_input_pct_monthly_rent" class="conc-radio-input">
+              <input type="number" id="fc_val_pct_monthly_rent" min="0" max="100" step="1" placeholder="50">
+              <span style="color:var(--text-secondary);font-size:13px;font-weight:500;">%</span>
+              <span style="color:var(--text-muted);font-size:12px;">of 1 month&rsquo;s rent</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 2. Apply to (Net Effective vs Gross) toggle -->
+        <div style="margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;">Apply to</div>
+            <span title="Net Effective: discount the tenant's true monthly cost. Gross: bump advertised rent to preserve the net effective target." style="cursor:help;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--border-mid);color:var(--text-secondary);font-size:10px;font-weight:700;">?</span>
+          </div>
+          <div style="display:flex;border:1px solid var(--border-mid);border-radius:var(--radius);overflow:hidden;max-width:360px;">
+            <button type="button" id="fc_apply_net_eff" onclick="setConcApplyTo('net_eff')" style="flex:1;padding:8px 14px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;background:var(--surface);color:var(--text-secondary);">Net Effective</button>
+            <button type="button" id="fc_apply_gross"   onclick="setConcApplyTo('gross')"   style="flex:1;padding:8px 14px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;background:var(--surface);color:var(--text-secondary);">Gross</button>
+          </div>
+        </div>
+
+        <!-- 3. Applicable Lease Terms -->
+        <div style="margin-bottom:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;">Applicable Lease Terms</div>
+            <div style="display:flex;gap:12px;">
+              <button type="button" onclick="selectAllConcTerms()" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:500;cursor:pointer;padding:0;">Select all</button>
+              <button type="button" onclick="clearAllConcTerms()"  style="background:none;border:none;color:var(--text-muted);font-size:11px;font-weight:500;cursor:pointer;padding:0;">Clear</button>
+            </div>
+          </div>
+          <div id="fc_termPills" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+          <div id="fc_termPillsEmpty" style="display:none;font-size:11.5px;color:var(--text-muted);font-style:italic;">No lease terms are currently marked available for this scope &mdash; configure availability in Term Management.</div>
+        </div>
+
+        <!-- 4. Applies to (New Lease / Renewal / Both) — unchanged -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-weight:600;">Applies to</div>
+          <div style="display:flex;border:1px solid var(--border-mid);border-radius:var(--radius);overflow:hidden;max-width:360px;">
+            ${['New Lease','Renewal','Both'].map((lt,i)=>`<button type="button" id="ltype_${i}" onclick="setLeaseType(${i})" style="flex:1;padding:8px 8px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;background:${i===2?'var(--accent)':'var(--surface)'};color:${i===2?'#fff':'var(--text-secondary)'};font-weight:${i===2?'600':'400'};">${lt}</button>`).join('')}
+          </div>
+        </div>
+
+        <!-- 5. Stackable + Priority -->
+        <div style="margin-bottom:20px;display:flex;gap:20px;align-items:center;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_stackable" checked style="accent-color:var(--accent);">Stackable</label>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:12px;color:var(--text-secondary);">Priority</span>
+            <input type="number" id="fc_priority" value="1" min="1" style="width:52px;border:1px solid var(--border-mid);border-radius:var(--radius);padding:5px 8px;font-family:'Inter',sans-serif;font-size:12px;text-align:center;outline:none;">
+          </div>
+        </div>
+
+        <!-- 6. Offer Start + Offer End (side-by-side shared custom date picker) -->
+        <div style="margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div>
+            <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-weight:600;">Offer Start</div>
+            <button type="button" id="fc_start_trigger" class="conc-date-trigger is-placeholder">${dateIcon}<span id="fc_start_label">Start date</span></button>
+          </div>
+          <div>
+            <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-weight:600;">Offer End</div>
+            <button type="button" id="fc_end_trigger" class="conc-date-trigger is-placeholder">${dateIcon}<span id="fc_end_label">End date</span></button>
+          </div>
+        </div>
+
+        ${includeExclude ? `
+        <!-- 7. Exclude (AF / RC) — community / bedtype scope only -->
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:20px;align-items:center;">
+          <span style="font-size:12px;color:var(--text-secondary);font-weight:500;">Exclude:</span>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_excludeAF" style="accent-color:var(--accent);">Affordable (AF)</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="fc_excludeRC" style="accent-color:var(--accent);">Rent Controlled (RC)</label>
+        </div>` : ''}
+
+        <!-- 8. Footer -->
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+          <button type="button" onclick="cancelConcForm()" class="btn btn-ghost" style="font-size:12px;">Cancel</button>
+          <button type="button" onclick="${saveFn}()" class="btn btn-primary" style="font-size:12px;"><span id="saveConcBtnLabel">Save Concession</span></button>
+        </div>
+
+      </div>
+    </div>`;
 }
 
-function onValueTypeChange() {
-  const vt = document.getElementById('fc_valueType')?.value || 'absolute';
-  const labels = {
-    absolute: 'Amount ($)',
-    relative: 'Amount (%)',
-    flat_monthly: 'Monthly Amount ($/mo)',
-    free_period: 'Months Free',
+function setConcValueType(vt) {
+  selectedConcValueType = vt;
+  document.querySelectorAll('input[name="fc_valueType"]').forEach(r => { r.checked = r.value === vt; });
+  ['flat_monthly','total_dollar','pct_monthly_rent'].forEach(id => {
+    const el = document.getElementById('fc_input_' + id);
+    if (el) el.classList.toggle('open', id === vt);
+  });
+}
+
+function setConcApplyTo(mode) {
+  selectedConcApplyTo = mode;
+  const paint = (id, on) => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.style.background = on ? 'var(--accent)' : 'var(--surface)';
+    b.style.color      = on ? '#fff'           : 'var(--text-secondary)';
+    b.style.fontWeight = on ? '600'             : '400';
   };
-  const lbl = document.getElementById('fc_valueLabel');
-  if (lbl) lbl.textContent = labels[vt] ?? 'Amount';
-  updateConcPreview();
+  paint('fc_apply_net_eff', mode === 'net_eff');
+  paint('fc_apply_gross',   mode === 'gross');
 }
 
-
-function setApplication(type) {
-  selectedApplication = type;
-  const descs = {
-    discount: 'Reduces the net effective rent the resident pays',
-    gross_up: 'Listed rent is increased; net effective equals target rent',
-  };
-  const dEl = document.getElementById('app_discount');
-  const gEl = document.getElementById('app_grossup');
-  if (dEl) {
-    dEl.style.background = type === 'discount' ? 'var(--accent)' : 'var(--surface)';
-    dEl.style.color = type === 'discount' ? '#fff' : 'var(--text-secondary)';
-    dEl.style.fontWeight = type === 'discount' ? '600' : '400';
-  }
-  if (gEl) {
-    gEl.style.background = type === 'gross_up' ? 'var(--accent)' : 'var(--surface)';
-    gEl.style.color = type === 'gross_up' ? '#fff' : 'var(--text-secondary)';
-    gEl.style.fontWeight = type === 'gross_up' ? '600' : '400';
-  }
-  const dEsc = document.getElementById('applicationDesc');
-  if (dEsc) dEsc.textContent = descs[type];
+function setLeaseType(i) {
+  selectedLeaseType = i;
+  [0,1,2].forEach(j => {
+    const b = document.getElementById('ltype_' + j);
+    if (!b) return;
+    b.style.background = j === i ? 'var(--accent)' : 'var(--surface)';
+    b.style.color      = j === i ? '#fff'          : 'var(--text-secondary)';
+    b.style.fontWeight = j === i ? '600'           : '400';
+  });
 }
 
-function setLeaseType(i){selectedLeaseType=i;[0,1,2].forEach(j=>{const b=document.getElementById('ltype_'+j);if(b){b.style.background=j===i?'var(--accent)':'var(--surface)';b.style.color=j===i?'#fff':'var(--text-secondary)';b.style.fontWeight=j===i?'600':'400';}});}
-
-function updateConcPreview() {
-  const val = parseFloat(document.getElementById('fc_value')?.value);
-  if (isNaN(val) || val <= 0) {
-    const cp = document.getElementById('concPreview');
-    if (cp) cp.style.display = 'none';
+function _renderTermPills() {
+  const terms = getAvailableTermsForScope(selectedMgmtCommId, selectedMgmtBedType);
+  const wrap  = document.getElementById('fc_termPills');
+  const empty = document.getElementById('fc_termPillsEmpty');
+  if (!wrap) return;
+  if (!terms.length) {
+    wrap.innerHTML = '';
+    if (empty) empty.style.display = 'block';
     return;
   }
-  const vt = document.getElementById('fc_valueType')?.value || 'absolute';
-  const comm = CONCESSIONS_DATA.find(c => c.id === selectedMgmtCommId);
-  const bt = selectedMgmtBedType ? comm?.bedTypes.find(b => b.type === selectedMgmtBedType) : null;
-  const baseRent = bt?.recRent ?? comm?.bedTypes[0]?.recRent ?? 1800;
-  let da;
-  if (vt === 'relative') da = Math.round(baseRent * val / 100);
-  else if (vt === 'free_period') da = Math.round(baseRent * val / 12);
-  else if (vt === 'flat_monthly') da = val;
-  else da = val;
-  document.getElementById('previewAmount').textContent = '-$' + da;
-  document.getElementById('previewNetEff').textContent = '$' + Math.max(0, baseRent - da).toLocaleString();
-  const pp = document.getElementById('previewPct');
-  if (pp) pp.textContent = parseFloat((da / baseRent * 100).toFixed(1)) + '%';
-  document.getElementById('concPreview').style.display = 'block';
+  if (empty) empty.style.display = 'none';
+  wrap.innerHTML = terms.map(m => {
+    const sel = selectedConcTerms.has(m);
+    return `<span class="conc-term-pill${sel?' selected':''}" onclick="toggleConcTerm(${m})">
+      <input type="checkbox" ${sel?'checked':''} data-term="${m}" tabindex="-1" style="pointer-events:none;">${m} mo
+    </span>`;
+  }).join('');
+}
+
+function toggleConcTerm(m) {
+  if (selectedConcTerms.has(m)) selectedConcTerms.delete(m);
+  else                          selectedConcTerms.add(m);
+  _renderTermPills();
+}
+
+function selectAllConcTerms() {
+  getAvailableTermsForScope(selectedMgmtCommId, selectedMgmtBedType).forEach(m => selectedConcTerms.add(m));
+  _renderTermPills();
+}
+
+function clearAllConcTerms() {
+  selectedConcTerms.clear();
+  _renderTermPills();
+}
+
+// Wire the two SingleDatePicker instances to the Offer Start / End triggers.
+// Prior instances' popup panels live on document.body — remove them before
+// rebuilding so re-renders don't leak orphan popups.
+function _initConcFormPickers(startDate, endDate) {
+  if (_concStartPicker?.picker) _concStartPicker.picker.remove();
+  if (_concEndPicker?.picker)   _concEndPicker.picker.remove();
+  const startTrig = document.getElementById('fc_start_trigger');
+  const endTrig   = document.getElementById('fc_end_trigger');
+  const startLbl  = document.getElementById('fc_start_label');
+  const endLbl    = document.getElementById('fc_end_label');
+  if (!startTrig || !endTrig) { _concStartPicker = null; _concEndPicker = null; return; }
+  _concStartPicker = new SingleDatePicker({ trigger: startTrig, labelEl: startLbl, placeholder: 'Start date' });
+  _concEndPicker   = new SingleDatePicker({ trigger: endTrig,   labelEl: endLbl,   placeholder: 'End date'   });
+  if (startDate) _concStartPicker.setDate(startDate);
+  if (endDate)   _concEndPicker.setDate(endDate);
+}
+
+function _setValueInput(vt, value) {
+  const el = document.getElementById('fc_val_' + vt);
+  if (el) el.value = value ?? '';
+}
+function _getValueInput(vt) {
+  const el = document.getElementById('fc_val_' + vt);
+  return el ? parseFloat(el.value) : NaN;
+}
+
+// Parse legacy "MM/DD/YY" strings emitted by the old form into Date. "25"
+// → 2025, "99" → 1999 (pre-2000 fallback so test fixtures remain stable).
+function _parseMMDDYY(s) {
+  if (!s) return null;
+  const m = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(s);
+  if (!m) return null;
+  const yy = parseInt(m[3], 10);
+  const fullYear = yy + (yy >= 70 ? 1900 : 2000);
+  return new Date(fullYear, parseInt(m[1],10) - 1, parseInt(m[2],10));
+}
+function _mmddyy(d) {
+  return (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getDate().toString().padStart(2,'0') + '/' + String(d.getFullYear()).slice(2);
 }
 
 function openAddConcForm() {
@@ -564,20 +786,22 @@ function openAddConcForm() {
   if (t) t.textContent = selectedMgmtUnitId ? 'New Unit-Specific Concession' : 'New Concession';
   const sl = document.getElementById('saveConcBtnLabel');
   if (sl) sl.textContent = 'Save Concession';
-  const fv = document.getElementById('fc_value'); if (fv) fv.value = '';
-  const fp = document.getElementById('fc_priority'); if (fp) fp.value = selectedMgmtUnitId ? '5' : '1';
+
+  const fp = document.getElementById('fc_priority');  if (fp) fp.value = selectedMgmtUnitId ? '5' : '1';
   const fs = document.getElementById('fc_stackable'); if (fs) fs.checked = true;
   const fa = document.getElementById('fc_excludeAF'); if (fa) fa.checked = false;
   const fr = document.getElementById('fc_excludeRC'); if (fr) fr.checked = false;
-  const ts = document.getElementById('fc_termSelect');
-  if (ts) Array.from(ts.options).forEach(o => { o.selected = false; });
-  const us = document.getElementById('fc_unitStatus'); if (us) us.value = 'all';
-  const mvd = document.getElementById('fc_minVacancyDays'); if (mvd) mvd.value = '';
-  const cp = document.getElementById('concPreview'); if (cp) cp.style.display = 'none';
-  const m = document.getElementById('concEditMeta'); if (m) m.remove();
-  setValueTypeId('absolute');
+  ['flat_monthly','total_dollar','pct_monthly_rent'].forEach(id => _setValueInput(id, ''));
+
+  setConcValueType('flat_monthly');
+  setConcApplyTo('net_eff');
   setLeaseType(2);
-  setApplication('discount');
+
+  selectedConcTerms = new Set(getAvailableTermsForScope(selectedMgmtCommId, selectedMgmtBedType));
+  _renderTermPills();
+  _initConcFormPickers(null, null);
+
+  const m = document.getElementById('concEditMeta'); if (m) m.remove();
   const form = document.getElementById('addConcForm');
   if (form) { form.style.display = 'block'; form.scrollIntoView({behavior:'smooth'}); }
 }
@@ -586,31 +810,39 @@ function editMgmtConc(id) {
   editingConcessionId = id;
   const comm = CONCESSIONS_DATA.find(c => c.id === selectedMgmtCommId);
   const bt = selectedMgmtBedType ? comm?.bedTypes.find(b => b.type === selectedMgmtBedType) : null;
-  const concs = bt ? bt.btConcessions : comm?.commConcessions ?? [];
+  const concs = selectedMgmtUnitId
+    ? (bt?.units.find(u => u.id === selectedMgmtUnitId)?.concessions ?? [])
+    : (bt ? bt.btConcessions : (comm?.commConcessions ?? []));
   const conc = concs.find(c => c.id === id);
   if (!conc) return;
+
   document.getElementById('addConcFormTitle').textContent = 'Edit Concession';
   document.getElementById('saveConcBtnLabel').textContent = 'Update';
-  document.getElementById('fc_type').value = conc.type;
-  document.getElementById('fc_value').value = conc.value;
-  document.getElementById('fc_priority').value = conc.priority;
-  document.getElementById('fc_stackable').checked = conc.stackable;
-  document.getElementById('fc_excludeAF').checked = conc.excludeAffordable;
-  document.getElementById('fc_excludeRC').checked = conc.excludeRC;
-  setValueTypeId(conc.valueType ?? 'absolute');
+
+  const fp = document.getElementById('fc_priority');  if (fp) fp.value = conc.priority ?? 1;
+  const fs = document.getElementById('fc_stackable'); if (fs) fs.checked = !!conc.stackable;
+  const fa = document.getElementById('fc_excludeAF'); if (fa) fa.checked = !!conc.excludeAffordable;
+  const fr = document.getElementById('fc_excludeRC'); if (fr) fr.checked = !!conc.excludeRC;
+
+  const vt = ['flat_monthly','total_dollar','pct_monthly_rent'].includes(conc.valueType) ? conc.valueType : 'flat_monthly';
+  ['flat_monthly','total_dollar','pct_monthly_rent'].forEach(id => _setValueInput(id, ''));
+  _setValueInput(vt, conc.value);
+  setConcValueType(vt);
+
+  setConcApplyTo(conc.applyTo === 'gross' ? 'gross' : 'net_eff');
   setLeaseType(conc.leaseType === 'New Lease' ? 0 : conc.leaseType === 'Renewal' ? 1 : 2);
-  setApplication(conc.application ?? 'discount');
-  // Pre-select term multiselect options from conc.termValues array
-  const termSelect = document.getElementById('fc_termSelect');
-  if (termSelect) {
-    const set = new Set((conc.termValues && Array.isArray(conc.termValues)) ? conc.termValues : []);
-    Array.from(termSelect.options).forEach(opt => { opt.selected = set.has(parseInt(opt.value)); });
-  }
-  const us = document.getElementById('fc_unitStatus'); if (us) us.value = conc.unitStatus ?? 'all';
-  const mvd = document.getElementById('fc_minVacancyDays'); if (mvd) mvd.value = conc.minVacancyDays ?? '';
+
+  const available = getAvailableTermsForScope(selectedMgmtCommId, selectedMgmtBedType);
+  const scoped = Array.isArray(conc.applicableLeaseTerms) && conc.applicableLeaseTerms.length > 0
+    ? conc.applicableLeaseTerms.filter(m => available.includes(m))
+    : available;
+  selectedConcTerms = new Set(scoped);
+  _renderTermPills();
+
+  _initConcFormPickers(_parseMMDDYY(conc.startDate), _parseMMDDYY(conc.endDate));
+
   const form = document.getElementById('addConcForm');
   form.style.display = 'block';
-  // Inject (or replace) the created/edited summary inside the form card
   const card = form.querySelector('div[style*="background:var(--body-bg)"]') || form.firstElementChild;
   let meta = document.getElementById('concEditMeta');
   if (!meta) {
@@ -620,44 +852,43 @@ function editMgmtConc(id) {
     if (card) card.appendChild(meta);
   }
   meta.innerHTML = `Created by <strong>${conc.createdBy ?? 'Unknown'}</strong>${conc.createdAt ? ' on ' + conc.createdAt : ''}${conc.editedBy ? ` &middot; Last edited by <strong>${conc.editedBy}</strong>${conc.editedAt ? ' on ' + conc.editedAt : ''}` : ''}`;
-  updateConcPreview();
   form.scrollIntoView({behavior:'smooth'});
 }
 
-function cancelConcForm(){editingConcessionId=null;document.getElementById('addConcForm').style.display='none';const m=document.getElementById('concEditMeta');if(m)m.remove();}
+function cancelConcForm() {
+  editingConcessionId = null;
+  const form = document.getElementById('addConcForm');
+  if (form) form.style.display = 'none';
+  const m = document.getElementById('concEditMeta'); if (m) m.remove();
+}
 
 function _gatherFormFields() {
-  const vt = document.getElementById('fc_valueType').value;
-  const value = parseFloat(document.getElementById('fc_value').value);
-  if (isNaN(value) || value <= 0) { alert('Please enter a valid value.'); return null; }
+  const vt = selectedConcValueType;
+  const value = _getValueInput(vt);
+  if (isNaN(value) || value <= 0) { alert('Please enter a valid amount.'); return null; }
+  if (vt === 'pct_monthly_rent' && value > 100) { alert('Percent value cannot exceed 100.'); return null; }
+
+  const available = getAvailableTermsForScope(selectedMgmtCommId, selectedMgmtBedType);
+  const selected  = Array.from(selectedConcTerms).filter(m => available.includes(m)).sort((a,b)=>a-b);
+  const applicableLeaseTerms = selected.length > 0 ? selected : [...available];
+
   const lTypes = ['New Lease','Renewal','Both'];
-  const lt = lTypes[selectedLeaseType];
-  const termSelect = document.getElementById('fc_termSelect');
-  const selectedTerms = termSelect
-    ? Array.from(termSelect.selectedOptions).map(o => parseInt(o.value))
-    : [];
-  const termValues = selectedTerms.length > 0 ? selectedTerms : null;
-  const termSpecific = selectedTerms.length > 0;
   return {
-    type: document.getElementById('fc_type').value,
-    value, valueType: vt,
+    valueType: vt, value,
+    applyTo: selectedConcApplyTo,
+    applicableLeaseTerms,
     priority: parseInt(document.getElementById('fc_priority').value) || 1,
     stackable: document.getElementById('fc_stackable').checked,
     excludeAF: document.getElementById('fc_excludeAF')?.checked ?? false,
     excludeRC: document.getElementById('fc_excludeRC')?.checked ?? false,
-    leaseType: lt,
-    termSpecific, termValues,
-    unitStatus: document.getElementById('fc_unitStatus')?.value ?? 'all',
-    minVacancyDays: parseInt(document.getElementById('fc_minVacancyDays')?.value) || null,
-    application: selectedApplication,
+    leaseType: lTypes[selectedLeaseType],
+    offerStart: _concStartPicker?.getDate() ?? null,
+    offerEnd:   _concEndPicker?.getDate()   ?? null,
   };
 }
 
-function _computeDisplayAmount(vt, value, baseRent) {
-  if (vt === 'relative') return Math.round(baseRent * value / 100);
-  if (vt === 'free_period') return Math.round(baseRent * value / 12);
-  if (vt === 'flat_monthly') return value;
-  return value;
+function _computeDisplayAmount(valueType, value, baseRent, term) {
+  return concessionMonthlyImpact({ valueType, value }, baseRent, term || 12);
 }
 
 function saveMgmtConc() {
@@ -667,19 +898,17 @@ function saveMgmtConc() {
   const bt = selectedMgmtBedType ? comm?.bedTypes.find(b => b.type === selectedMgmtBedType) : null;
   const baseRent = bt?.recRent ?? comm?.bedTypes[0]?.recRent ?? 1800;
   const da = _computeDisplayAmount(f.valueType, f.value, baseRent);
-  const fd = d => (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getDate().toString().padStart(2,'0') + '/' + String(d.getFullYear()).slice(2);
-  const sd = document.getElementById('fc_startDate').value ? fd(new Date(document.getElementById('fc_startDate').value)) : fd(new Date());
-  const ed = document.getElementById('fc_endDate').value ? fd(new Date(document.getElementById('fc_endDate').value)) : fd(new Date(Date.now()+30*864e5));
+  const sd = f.offerStart ? _mmddyy(f.offerStart) : _mmddyy(new Date());
+  const ed = f.offerEnd   ? _mmddyy(f.offerEnd)   : _mmddyy(new Date(Date.now() + 30 * 864e5));
   const nowFmt = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
   const target = bt ? bt.btConcessions : comm.commConcessions;
+
   const common = {
-    type: f.type, value: f.value, valueType: f.valueType, displayAmount: da,
+    value: f.value, valueType: f.valueType, displayAmount: da,
+    applyTo: f.applyTo, applicableLeaseTerms: f.applicableLeaseTerms,
     priority: f.priority, stackable: f.stackable, leaseType: f.leaseType,
     excludeAffordable: f.excludeAF, excludeRC: f.excludeRC,
-    startDate: sd, endDate: ed, status: 'Active',
-    termSpecific: f.termSpecific, termValues: f.termValues,
-    unitStatus: f.unitStatus, minVacancyDays: f.minVacancyDays,
-    application: f.application,
+    startDate: sd, endDate: ed, status: 'Active', monthly: true,
   };
   if (editingConcessionId) {
     const idx = target.findIndex(c => c.id === editingConcessionId);
@@ -694,7 +923,6 @@ function saveMgmtConc() {
       commId: selectedMgmtCommId, commName: comm.name,
       bedType: selectedMgmtBedType, unitId: null,
       ...common,
-      monthly: MONTHLY_BY_TYPE[f.type] ?? true,
       daysActive: 0, daysRemaining: 30,
       leasesOfferedTo: 0, leasesTaken: 0, uptakeRate: 0, totalCost: 0,
       createdBy: 'Current User', createdAt: nowFmt,
@@ -715,17 +943,15 @@ function saveUnitConc() {
   const unit = btD?.units.find(u => u.id === selectedMgmtUnitId);
   if (!unit) return;
   const da = _computeDisplayAmount(f.valueType, f.value, unit.baseRent);
-  const fd = d => (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getDate().toString().padStart(2,'0') + '/' + String(d.getFullYear()).slice(2);
-  const sd = document.getElementById('fc_startDate').value ? fd(new Date(document.getElementById('fc_startDate').value)) : fd(new Date());
-  const ed = document.getElementById('fc_endDate').value ? fd(new Date(document.getElementById('fc_endDate').value)) : fd(new Date(Date.now()+30*864e5));
+  const sd = f.offerStart ? _mmddyy(f.offerStart) : _mmddyy(new Date());
+  const ed = f.offerEnd   ? _mmddyy(f.offerEnd)   : _mmddyy(new Date(Date.now() + 30 * 864e5));
   const nowFmt = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+
   const common = {
-    type: f.type, value: f.value, valueType: f.valueType, displayAmount: da,
+    value: f.value, valueType: f.valueType, displayAmount: da,
+    applyTo: f.applyTo, applicableLeaseTerms: f.applicableLeaseTerms,
     priority: f.priority, stackable: f.stackable, leaseType: f.leaseType,
-    startDate: sd, endDate: ed, status: 'Active',
-    termSpecific: f.termSpecific, termValues: f.termValues,
-    unitStatus: f.unitStatus, minVacancyDays: f.minVacancyDays,
-    application: f.application,
+    startDate: sd, endDate: ed, status: 'Active', monthly: true,
   };
   if (editingConcessionId) {
     const idx = unit.concessions.findIndex(c => c.id === editingConcessionId);
@@ -740,7 +966,6 @@ function saveUnitConc() {
       commId: selectedMgmtCommId, commName: comm.name,
       bedType: selectedMgmtBedType, unitId: selectedMgmtUnitId,
       ...common,
-      monthly: MONTHLY_BY_TYPE[f.type] ?? true,
       taken: false, daysActive: 0, daysRemaining: 30,
       daysVacant: unit.daysOnMarket ?? 0,
       excludeAffordable: false, excludeRC: false,
