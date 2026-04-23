@@ -20,18 +20,18 @@ function _randAmenities() {
 }
 
 const _COMMUNITIES_RAW = [
-  { id: 'WCC-001', name: 'Windsor at Falcon Creek',    state: 'Texas', metro: 'Dallas-Fort Worth', rm: 'Sarah Mitchell',  cd: 'James Holbrook' },
-  { id: 'WCC-002', name: 'Windsor Meadows',            state: 'Texas', metro: 'Dallas-Fort Worth', rm: 'Sarah Mitchell',  cd: 'James Holbrook' },
-  { id: 'WCC-003', name: 'Windsor at Viridian',        state: 'Texas', metro: 'Dallas-Fort Worth', rm: 'Sarah Mitchell',  cd: 'Dana Cortez'    },
-  { id: 'WCC-004', name: 'Windsor Lantana Hills',      state: 'Texas', metro: 'Austin',            rm: 'Tom Bridges',    cd: 'Dana Cortez'    },
-  { id: 'WCC-005', name: 'Windsor at Waterview',       state: 'Texas', metro: 'Houston',           rm: 'Tom Bridges',    cd: 'Renee Park'     },
-  { id: 'WCC-006', name: 'Windsor Plantation',         state: 'Georgia', metro: 'Atlanta',           rm: 'Priya Nair',     cd: 'Renee Park'     },
-  { id: 'WCC-007', name: 'Windsor at Lake Pointe',     state: 'Florida', metro: 'Orlando',           rm: 'Priya Nair',     cd: 'Marcus Webb'    },
-  { id: 'WCC-008', name: 'Windsor Boca Raton',         state: 'Florida', metro: 'Miami',             rm: 'Carlos Reyes',   cd: 'Marcus Webb'    },
-  { id: 'WCC-009', name: 'Windsor at Westside',        state: 'North Carolina', metro: 'Charlotte',         rm: 'Carlos Reyes',   cd: 'Linda Foss'     },
-  { id: 'WCC-010', name: 'Windsor Southpark',          state: 'North Carolina', metro: 'Charlotte',         rm: 'Carlos Reyes',   cd: 'Linda Foss'     },
-  { id: 'WCC-011', name: 'Windsor at Dulles',          state: 'Virginia', metro: 'Northern Virginia', rm: 'Amy Chen',       cd: 'Steve Nguyen'   },
-  { id: 'WCC-012', name: 'Windsor at Kingstowne',      state: 'Virginia', metro: 'Northern Virginia', rm: 'Amy Chen',       cd: 'Steve Nguyen'   },
+  { id: 'WCC-001', name: 'Windsor Turtle Creek',          state: 'Texas',          metro: 'Dallas-Fort Worth', rm: 'Sarah Mitchell',  cd: 'James Holbrook' },
+  { id: 'WCC-002', name: 'Windsor on White Rock Lake',    state: 'Texas',          metro: 'Dallas-Fort Worth', rm: 'Sarah Mitchell',  cd: 'James Holbrook' },
+  { id: 'WCC-003', name: 'Windsor CityLine',              state: 'Texas',          metro: 'Dallas-Fort Worth', rm: 'Sarah Mitchell',  cd: 'Dana Cortez'    },
+  { id: 'WCC-004', name: 'Windsor Lantana Hills',         state: 'Texas',          metro: 'Austin',            rm: 'Tom Bridges',     cd: 'Dana Cortez'    },
+  { id: 'WCC-005', name: 'Windsor Memorial',              state: 'Texas',          metro: 'Houston',           rm: 'Tom Bridges',     cd: 'Renee Park'     },
+  { id: 'WCC-006', name: 'Windsor Interlock',             state: 'Georgia',        metro: 'Atlanta',           rm: 'Priya Nair',      cd: 'Renee Park'     },
+  { id: 'WCC-007', name: 'Windsor Old Fourth Ward',       state: 'Georgia',        metro: 'Atlanta',           rm: 'Priya Nair',      cd: 'Marcus Webb'    },
+  { id: 'WCC-008', name: 'Windsor Vinings',               state: 'Georgia',        metro: 'Atlanta',           rm: 'Priya Nair',      cd: 'Marcus Webb'    },
+  { id: 'WCC-009', name: 'Windsor at Pembroke Gardens',   state: 'Florida',        metro: 'Miami',             rm: 'Carlos Reyes',    cd: 'Marcus Webb'    },
+  { id: 'WCC-010', name: 'Windsor Boca Raton',            state: 'Florida',        metro: 'Miami',             rm: 'Carlos Reyes',    cd: 'Linda Foss'     },
+  { id: 'WCC-011', name: 'Windsor Addison Park',          state: 'North Carolina', metro: 'Charlotte',         rm: 'Carlos Reyes',    cd: 'Linda Foss'     },
+  { id: 'WCC-012', name: 'Windsor Kingstowne',            state: 'Virginia',       metro: 'Northern Virginia', rm: 'Amy Chen',        cd: 'Steve Nguyen'   },
 ];
 
 const COMMUNITIES = _COMMUNITIES_RAW.map((c, i) => ({
@@ -544,7 +544,7 @@ const CURRENT_CPI = 3.1;
 let RENT_CONTROL_RULES = [
   {
     id: 'RCR-001',
-    name: 'Windsor at Falcon Creek cap',
+    name: 'Windsor Turtle Creek cap',
     scope: { communityIds: ['WCC-001'], bedTypes: 'all', unitIds: 'all' },
     formula: { type: 'flat_pct', value: 5 },
     ceiling: null,
@@ -559,11 +559,11 @@ let RENT_CONTROL_RULES = [
     bankingMaxMultiplier: null,
     activeFrom: '2026-03-01T00:00:00.000Z',
     activeTo: null,
-    notes: 'Tighter cap for Falcon Creek per asset management request.',
+    notes: 'Tighter cap for Turtle Creek per asset management request.',
   },
   {
     id: 'RCR-002',
-    name: 'Windsor Plantation 1-bed cap',
+    name: 'Windsor Interlock 1-bed cap',
     scope: { communityIds: ['WCC-006'], bedTypes: ['1 Bed'], unitIds: 'all' },
     formula: { type: 'flat_dollar', value: 125 },
     ceiling: null,
