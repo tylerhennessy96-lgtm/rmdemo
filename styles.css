@@ -278,9 +278,13 @@ html, body {
 }
 
 /* ── Availability Range Picker ───────────────────────────── */
+/* Portaled to document.body and position:fixed, so no ancestor can trap it
+   in a stacking context. z-index sits above modals (500) and nav dropdowns
+   (999) so the popup always renders above whatever triggered it — including
+   inside the Lock Unit Pricing modal on pricing.html. */
 .avail-range-picker {
   position: fixed;
-  z-index: 200;
+  z-index: 1100;
   display: none;
   background: #1e2028;
   border: 1px solid #2a2d35;
@@ -414,6 +418,28 @@ html, body {
 .btn-adv-filters:hover { background: var(--row-hover); border-color: var(--border-mid); }
 
 .btn-adv-filters svg { width: 13px; height: 13px; }
+
+/* Re-run pricing — reuses the .btn-adv-filters outlined look so the two
+   sit flush in the subtab bar. Disabled + spinner states handled inline. */
+.btn-rerun[disabled] { opacity: .7; cursor: default; }
+.btn-rerun .rerun-spinner {
+  width: 12px; height: 12px;
+  border: 2px solid rgba(0,0,0,0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: rerun-spin .7s linear infinite;
+  display: inline-block;
+}
+@keyframes rerun-spin { to { transform: rotate(360deg); } }
+
+/* Small muted timestamp that sits to the left of the Re-run button. */
+.rerun-timestamp {
+  font-family: 'Inter', sans-serif;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-right: 8px;
+}
 
 /* Save button */
 .btn-save {

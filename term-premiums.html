@@ -63,6 +63,13 @@
     <button class="btn-save" id="saveBtn" onclick="saveChanges()" style="display:none;">Save</button>
   </div>
 
+  <!-- ── Mode Toggle (New Lease / Renewal) ── -->
+  <div class="subtab-bar">
+    <a href="#" class="subtab active" id="termMode-newLease" onclick="setTermMode('newLease');return false;">New Lease</a>
+    <a href="#" class="subtab"        id="termMode-renewal"  onclick="setTermMode('renewal');return false;">Renewal</a>
+    <div class="subtab-spacer"></div>
+  </div>
+
   <!-- ── Main ── -->
   <div class="main">
     <div style="padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface);font-size:12px;color:var(--text-muted);">
@@ -89,10 +96,27 @@
 <script>
 // ── State ─────────────────────────────────────────────────
 let expandedProperties = new Set();
-const premiumChanges = {};
+let termMode = 'newLease';                    // 'newLease' | 'renewal'
+const premiumChanges = {};                    // mode-scoped keys
 const premiumPropagated = {};
 const premiumOverridden = {};
 const propertyPremiumChanges = {};
+
+// Key helpers — scope pending edits by mode so toggling doesn't bleed state
+// across datasets. Colon-separated since commId itself contains a hyphen.
+function _pkey(commId, bedType, monthIndex) { return termMode + ':' + commId + ':' + bedType + ':' + monthIndex; }
+function _ppropkey(commId, monthIndex)      { return termMode + ':' + commId + ':' + monthIndex; }
+function _premField()                       { return termMode === 'renewal' ? 'premiumsRenewal'     : 'premiumsNewLease'; }
+function _availField()                      { return termMode === 'renewal' ? 'availabilityRenewal' : 'availabilityNewLease'; }
+
+function setTermMode(mode) {
+  if (mode === termMode) return;
+  termMode = mode;
+  document.getElementById('termMode-newLease').classList.toggle('active', mode === 'newLease');
+  document.getElementById('termMode-renewal').classList.toggle('active', mode === 'renewal');
+  renderPremiumTable();
+  checkSaveVisibility();
+}
 
 // ── Nav menu ──────────────────────────────────────────────
 function toggleMenu() {
@@ -263,24 +287,24 @@ document.addEventListener('click', e => {
 
 // ── Premium Logic ────────────────────────────────────────
 function getPremium(commId, bedType, monthIndex) {
-  const key = commId + '-' + bedType + '-' + monthIndex;
+  const key = _pkey(commId, bedType, monthIndex);
   if (key in premiumChanges) return premiumChanges[key];
   const comm = TERM_DATA.find(c => c.id === commId);
   const bt = comm?.bedTypes.find(b => b.type === bedType);
-  return bt?.premiums[monthIndex] ?? null;
+  return bt?.[_premField()][monthIndex] ?? null;
 }
 
 function getAvailForPremium(commId, bedType, monthIndex) {
   const comm = TERM_DATA.find(c => c.id === commId);
   const bt = comm?.bedTypes.find(b => b.type === bedType);
-  return bt?.availability[monthIndex] ?? false;
+  return bt?.[_availField()][monthIndex] ?? false;
 }
 
 function onPremiumInput(input, commId, bedType, monthIndex) {
   const raw = input.value.replace(/[^0-9.]/g, '');
   input.value = raw;
   const num = parseFloat(raw);
-  const key = commId + '-' + bedType + '-' + monthIndex;
+  const key = _pkey(commId, bedType, monthIndex);
   if (isNaN(num)) {
     delete premiumChanges[key];
     delete premiumOverridden[key];
@@ -300,12 +324,12 @@ function onPropertyPremiumInput(input, commId, monthIndex) {
   input.value = raw;
   const num = parseFloat(raw);
   if (isNaN(num)) return;
-  propertyPremiumChanges[commId + '-' + monthIndex] = num;
+  propertyPremiumChanges[_ppropkey(commId, monthIndex)] = num;
   const comm = TERM_DATA.find(c => c.id === commId);
   comm.bedTypes.forEach(bt => {
     const avail = getAvailForPremium(commId, bt.type, monthIndex);
     if (!avail) return;
-    const key = commId + '-' + bt.type + '-' + monthIndex;
+    const key = _pkey(commId, bt.type, monthIndex);
     if (!premiumOverridden[key]) {
       premiumChanges[key] = num;
       premiumPropagated[key] = true;
@@ -365,7 +389,7 @@ function renderPremiumTable() {
         cells += `<td style="background:#f9fafb;text-align:center;color:var(--text-muted);font-size:11.5px;padding:6px 2px;">0%</td>`;
         continue;
       }
-      const propKey = comm.id + '-' + i;
+      const propKey = _ppropkey(comm.id, i);
       const propChanged = propKey in propertyPremiumChanges;
       let propVal;
       if (propChanged) {
@@ -401,7 +425,7 @@ function renderPremiumTable() {
           continue;
         }
         const avail = getAvailForPremium(comm.id, bt.type, i);
-        const key = comm.id + '-' + bt.type + '-' + i;
+        const key = _pkey(comm.id, bt.type, i);
         const prem = getPremium(comm.id, bt.type, i);
         if (!avail) {
           bcells += `<td style="background:#f3f4f6;text-align:center;"><span style="color:var(--text-muted);font-size:11px;">&mdash;</span></td>`;
@@ -434,6 +458,18 @@ function checkSaveVisibility() {
 
 function saveChanges() {
   const count = Object.keys(premiumChanges).length;
+  // Flush pending edits into the correct mode-specific array on TERM_DATA.
+  // Key format: `mode:commId:bedType:i`. Terms 10+ (i > 7) can't reach here
+  // since their cells are read-only, so the policy remains intact.
+  Object.entries(premiumChanges).forEach(([k, val]) => {
+    const [mode, commId, bedType, iStr] = k.split(':');
+    const i = parseInt(iStr, 10);
+    const comm = TERM_DATA.find(c => c.id === commId);
+    const bt = comm?.bedTypes.find(b => b.type === bedType);
+    if (!bt) return;
+    const field = mode === 'renewal' ? 'premiumsRenewal' : 'premiumsNewLease';
+    bt[field][i] = val;
+  });
   Object.keys(premiumChanges).forEach(k => delete premiumChanges[k]);
   Object.keys(premiumPropagated).forEach(k => delete premiumPropagated[k]);
   Object.keys(premiumOverridden).forEach(k => delete premiumOverridden[k]);

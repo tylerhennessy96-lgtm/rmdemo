@@ -122,6 +122,13 @@ function makeUnits(communityId, bedType, count, baseRent) {
       priorLeaseTerm: _pickPriorLeaseTerm(unitId, priorRent != null && priorRent > 0),
       grossRent,
       hasPriorConcession: grossRent > priorRent,
+      // "New to market" — simple seeded flag. Drives a faint aquamarine
+      // row tint on pricing.html; not computed from availDate.
+      newToMarket: false,
+      // In-memory unit lock — freezes Rec. Rent Current at `lockedRecRent`
+      // until `lockUntil` passes (or indefinitely when lockUntil is null).
+      // Session-only state — not persisted; seeded fresh each page load.
+      lock: null,
       floorplan: ['Studio','1BR/1BA','1BR/2BA','2BR/1BA','2BR/2BA','3BR/2BA'][Math.floor(Math.random()*6)],
       area: Math.floor(Math.random()*600+450),
       floor: Math.floor(Math.random()*8+1),
@@ -177,27 +184,140 @@ const PRICING_DATA = COMMUNITIES.map(c => {
   };
 });
 
-// Term availability (24 months × communities)
+// ── Unit lock helpers ────────────────────────────────────────
+// Find a unit anywhere in PRICING_DATA by its id. O(total-units) but the
+// portfolio is small enough that a lookup map isn't worth maintaining.
+function findUnitInPricingData(unitId) {
+  for (const c of PRICING_DATA) {
+    for (const bt of c.bedTypes) {
+      const u = bt.units.find(x => x.id === unitId);
+      if (u) return { unit: u, community: c, bedType: bt };
+    }
+  }
+  return null;
+}
+
+// Clear any expired locks so Rec. Rent Current reverts to dynamic. A lock is
+// considered expired when lockUntil is set and has already passed; indefinite
+// locks (lockUntil === null) never expire automatically.
+function expireStaleUnitLocks() {
+  const now = Date.now();
+  PRICING_DATA.forEach(c => c.bedTypes.forEach(bt => bt.units.forEach(u => {
+    if (u.lock && u.lock.locked && u.lock.lockUntil) {
+      if (Date.parse(u.lock.lockUntil) <= now) u.lock = null;
+    }
+  })));
+}
+
+// Apply a lock to a unit. `untilDate` may be null for an indefinite lock.
+// Preserves the existing lockedRecRent snapshot when editing an already-
+// locked unit — that's the point of the feature: the frozen value must not
+// move when the RM only changes the end date or reason.
+function applyUnitLock(unitId, untilDate, reason) {
+  const found = findUnitInPricingData(unitId);
+  if (!found) return null;
+  const u = found.unit;
+  const prev = u.lock;
+  u.lock = {
+    locked: true,
+    lockUntil: untilDate ? untilDate.toISOString() : null,
+    lockedRecRent: prev?.lockedRecRent ?? u.recRent,
+    reason: reason || null,
+    lockedAt: prev?.lockedAt ?? new Date().toISOString(),
+  };
+  return u.lock;
+}
+
+function clearUnitLock(unitId) {
+  const found = findUnitInPricingData(unitId);
+  if (!found) return;
+  found.unit.lock = null;
+}
+
+// Seed eight units across the portfolio as "new to market" so the faint
+// aquamarine row tint on pricing.html is visible on load. Spread is:
+// 3 in the top-visible communities (WCC-001/002/003), 1 overlapping with
+// a seeded lock (WCC-005-1Bed-001) to demo the locked + new-to-market
+// combination, and the rest scattered further down the portfolio.
+(function _seedNewToMarket() {
+  const ids = [
+    'WCC-001-1Bed-002',  // Windsor Turtle Creek
+    'WCC-002-2Bed-001',  // Windsor on White Rock Lake
+    'WCC-003-3Bed-001',  // Windsor CityLine
+    'WCC-005-1Bed-001',  // Windsor Memorial (also locked — demonstrates overlap)
+    'WCC-006-2Bed-002',  // Windsor Interlock
+    'WCC-008-1Bed-001',  // Windsor Vinings
+    'WCC-010-2Bed-001',  // Windsor Boca Raton
+    'WCC-011-2Bed-002',  // Windsor Addison Park
+  ];
+  ids.forEach(id => {
+    const found = findUnitInPricingData(id);
+    if (found) found.unit.newToMarket = true;
+  });
+})();
+
+// Seed four demo locks across the portfolio so locked state is visible on
+// first load. Dynamic lockUntil values (14 and 60 days from today) are
+// computed at load time, so the seed stays stable across time zones.
+(function _seedUnitLocks() {
+  const iso = (d) => d.toISOString();
+  const daysOut = (n) => new Date(Date.now() + n * 864e5);
+  const seeds = [
+    { unitId: 'WCC-001-1Bed-001', until: null,         reason: 'Held for corporate relo program' },
+    { unitId: 'WCC-005-1Bed-001', until: daysOut(60),  reason: 'Renovation in progress' },
+    { unitId: 'WCC-006-2Bed-001', until: daysOut(14),  reason: 'Active negotiation — hold price' },
+    { unitId: 'WCC-009-1Bed-001', until: null,         reason: null },
+  ];
+  seeds.forEach(({ unitId, until, reason }) => {
+    const found = findUnitInPricingData(unitId);
+    if (!found) return;
+    found.unit.lock = {
+      locked: true,
+      lockUntil: until ? iso(until) : null,
+      lockedRecRent: found.unit.recRent,
+      reason,
+      lockedAt: iso(new Date()),
+    };
+  });
+})();
+
+// Term availability + premiums (24 months × communities). Each array is
+// split into new-lease and renewal variants so term.html / term-premiums.html
+// can configure the two contexts independently.
+//
+// Renewal availability inherits from new lease, then forces indices 4 and 7
+// (UI columns labelled "6" and "9") to true — the common pattern of
+// offering shorter terms to retain existing residents.
+// Renewal premiums inherit similarly, then set those same two indices to 2%.
+// Terms 10–24 (indices 8–22) stay at 0 on both datasets to respect the
+// short-term-only premium rule enforced by term-premiums.html.
 const TERM_DATA = COMMUNITIES.map(c => {
-  const availability = Array.from({ length: 24 }, (_, i) => {
-    // months 1-3 and 12 are commonly available, others random
+  const propAvailNew = Array.from({ length: 24 }, (_, i) => {
     if (i < 3 || i === 11) return Math.random() > 0.2;
     return Math.random() > 0.35;
   });
-  // Term premiums apply only to short-term leases (terms 2–9 months). Longer
-  // terms are priced at the standard rate — they MUST be 0 in the seed so
-  // the term-premiums UI doesn't flash stale numbers before rendering the
-  // read-only zero cells.
-  const premiums = availability.map((a, i) => i > 7 ? 0 : (a ? (Math.random() > 0.5 ? 50 : 35) : null));
+  const propAvailRen = propAvailNew.map((a, i) => (i === 4 || i === 7) ? true : a);
+  const propPremNew = propAvailNew.map((a, i) => i > 7 ? 0 : (a ? (Math.random() > 0.5 ? 50 : 35) : null));
+  const propPremRen = propPremNew.map((v, i) => (i === 4 || i === 7) ? 2 : v);
   return {
     ...c,
-    availability,
-    premiums,
-    bedTypes: UNIT_TYPES.map(bt => ({
-      type: bt,
-      availability: Array.from({ length: 24 }, (_, i) => Math.random() > 0.3),
-      premiums: Array.from({ length: 24 }, (_, i) => i > 7 ? 0 : (Math.random() > 0.5 ? 50 : 35)),
-    })),
+    availabilityNewLease: propAvailNew,
+    availabilityRenewal:  propAvailRen,
+    premiumsNewLease:     propPremNew,
+    premiumsRenewal:      propPremRen,
+    bedTypes: UNIT_TYPES.map(bt => {
+      const btAvailNew = Array.from({ length: 24 }, () => Math.random() > 0.3);
+      const btAvailRen = btAvailNew.map((a, i) => (i === 4 || i === 7) ? true : a);
+      const btPremNew  = Array.from({ length: 24 }, (_, i) => i > 7 ? 0 : (Math.random() > 0.5 ? 50 : 35));
+      const btPremRen  = btPremNew.map((v, i) => (i === 4 || i === 7) ? 2 : v);
+      return {
+        type: bt,
+        availabilityNewLease: btAvailNew,
+        availabilityRenewal:  btAvailRen,
+        premiumsNewLease:     btPremNew,
+        premiumsRenewal:      btPremRen,
+      };
+    }),
   };
 });
 
@@ -349,7 +469,9 @@ const MONTHLY_BY_TYPE = {
 
 // Returns the union of lease terms (2..24) marked available across every bed
 // type covered by the given scope. Used to populate the Applicable Lease
-// Terms multi-select on the concession form.
+// Terms multi-select on the concession form. Reads both the new-lease and
+// renewal availability arrays so the form's term list covers every lease
+// type a concession might apply to.
 function getAvailableTermsForScope(commId, bedType) {
   if (typeof TERM_DATA === 'undefined') return [];
   const comm = TERM_DATA.find(c => c.id === commId);
@@ -358,7 +480,10 @@ function getAvailableTermsForScope(commId, bedType) {
   const terms = new Set();
   bts.forEach(bt => {
     for (let m = 2; m <= 24; m++) {
-      if (bt.availability[m]) terms.add(m);
+      if ((bt.availabilityNewLease && bt.availabilityNewLease[m]) ||
+          (bt.availabilityRenewal  && bt.availabilityRenewal[m])) {
+        terms.add(m);
+      }
     }
   });
   return Array.from(terms).sort((a, b) => a - b);

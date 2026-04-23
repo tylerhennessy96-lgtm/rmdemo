@@ -63,6 +63,13 @@
     <button class="btn-save" id="saveBtn" onclick="saveChanges()" style="display:none;">Save</button>
   </div>
 
+  <!-- ── Mode Toggle (New Lease / Renewal) ── -->
+  <div class="subtab-bar">
+    <a href="#" class="subtab active" id="termMode-newLease" onclick="setTermMode('newLease');return false;">New Lease</a>
+    <a href="#" class="subtab"        id="termMode-renewal"  onclick="setTermMode('renewal');return false;">Renewal</a>
+    <div class="subtab-spacer"></div>
+  </div>
+
   <!-- ── Main ── -->
   <div class="main">
     <div class="table-wrap" id="tableWrap">
@@ -86,9 +93,26 @@
 <script>
 // ── State ─────────────────────────────────────────────────
 let expandedProperties = new Set();
-let termChanges = {};
+let termMode = 'newLease';                 // 'newLease' | 'renewal'
+let termChanges = {};                      // scoped by mode via `_tkey()`
 let termPropagated = {};
 let propertyTermChanges = {};
+
+// Key helpers — scope pending changes by mode so toggling between modes
+// doesn't bleed uncommitted edits across datasets. Colon separators keep
+// the keys parseable since commId itself contains hyphens ("WCC-001").
+function _tkey(commId, bedType, monthIndex) { return termMode + ':' + commId + ':' + bedType + ':' + monthIndex; }
+function _tpropkey(commId, monthIndex)      { return termMode + ':' + commId + ':' + monthIndex; }
+function _availField()                      { return termMode === 'renewal' ? 'availabilityRenewal' : 'availabilityNewLease'; }
+
+function setTermMode(mode) {
+  if (mode === termMode) return;
+  termMode = mode;
+  document.getElementById('termMode-newLease').classList.toggle('active', mode === 'newLease');
+  document.getElementById('termMode-renewal').classList.toggle('active', mode === 'renewal');
+  renderTermTable();
+  checkSaveVisibility();
+}
 
 // ── Nav menu ──────────────────────────────────────────────
 function toggleMenu() {
@@ -259,15 +283,15 @@ document.addEventListener('click', e => {
 
 // ── Term Availability Logic ──────────────────────────────
 function getAvailability(commId, bedType, monthIndex) {
-  const key = commId + '-' + bedType + '-' + monthIndex;
+  const key = _tkey(commId, bedType, monthIndex);
   if (key in termChanges) return termChanges[key];
   const comm = TERM_DATA.find(c => c.id === commId);
   const bt = comm?.bedTypes.find(b => b.type === bedType);
-  return bt?.availability[monthIndex] ?? false;
+  return bt?.[_availField()][monthIndex] ?? false;
 }
 
 function toggleAvailability(commId, bedType, monthIndex) {
-  const key = commId + '-' + bedType + '-' + monthIndex;
+  const key = _tkey(commId, bedType, monthIndex);
   const current = getAvailability(commId, bedType, monthIndex);
   termChanges[key] = !current;
   delete termPropagated[key];
@@ -281,11 +305,11 @@ function togglePropertyTerm(commId, monthIndex) {
   const allTrue = states.every(s => s);
   const newVal = !allTrue;
   comm.bedTypes.forEach(bt => {
-    const key = commId + '-' + bt.type + '-' + monthIndex;
+    const key = _tkey(commId, bt.type, monthIndex);
     termChanges[key] = newVal;
     termPropagated[key] = true;
   });
-  propertyTermChanges[commId + '-' + monthIndex] = true;
+  propertyTermChanges[_tpropkey(commId, monthIndex)] = true;
   checkSaveVisibility();
   renderTermTable();
 }
@@ -331,7 +355,7 @@ function renderTermTable() {
     for (let i = 0; i < 23; i++) {
       const allAvail = comm.bedTypes.every(bt => getAvailability(comm.id, bt.type, i));
       const noneAvail = comm.bedTypes.every(bt => !getAvailability(comm.id, bt.type, i));
-      const propChanged = (comm.id + '-' + i) in propertyTermChanges;
+      const propChanged = _tpropkey(comm.id, i) in propertyTermChanges;
       let icon, color, bg;
       if (allAvail) { icon = '&#10003;'; color = '#16a34a'; bg = 'rgba(74,222,128,0.08)'; }
       else if (noneAvail) { icon = '&#10007;'; color = '#e05252'; bg = 'rgba(248,113,113,0.06)'; }
@@ -351,7 +375,7 @@ function renderTermTable() {
       btr.className = 'row-bedtype';
       let bcells = `<td class="term-name-cell">${bt.type}</td>`;
       for (let i = 0; i < 23; i++) {
-        const key = comm.id + '-' + bt.type + '-' + i;
+        const key = _tkey(comm.id, bt.type, i);
         const avail = getAvailability(comm.id, bt.type, i);
         const isChanged = key in termChanges;
         const isProp = key in termPropagated;
@@ -379,6 +403,17 @@ function checkSaveVisibility() {
 
 function saveChanges() {
   const count = Object.keys(termChanges).length;
+  // Flush pending edits into the correct mode-specific array on TERM_DATA so
+  // changes persist across toggle flips. Key format: `mode:commId:bedType:i`.
+  Object.entries(termChanges).forEach(([k, val]) => {
+    const [mode, commId, bedType, iStr] = k.split(':');
+    const i = parseInt(iStr, 10);
+    const comm = TERM_DATA.find(c => c.id === commId);
+    const bt = comm?.bedTypes.find(b => b.type === bedType);
+    if (!bt) return;
+    const field = mode === 'renewal' ? 'availabilityRenewal' : 'availabilityNewLease';
+    bt[field][i] = !!val;
+  });
   Object.keys(termChanges).forEach(k => delete termChanges[k]);
   Object.keys(termPropagated).forEach(k => delete termPropagated[k]);
   Object.keys(propertyTermChanges).forEach(k => delete propertyTermChanges[k]);
