@@ -570,10 +570,10 @@ function fmtUSD(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
 function eventPill(type) {
   const meta = LEASE_EVENT_META[type];
   const st   = LEASE_EVENT_STYLE[type];
-  return `<span class="evt-pill" style="background:${st.bg};color:${st.fg};">${meta.label}</span>`;
+  return `<span class="evt-pill" style="background:#f1f5f9;color:${st.fg};">${meta.label}</span>`;
 }
 function communityBadge(comm) {
-  return `${comm.name}<span class="class-badge class-${comm.class}">${comm.class}</span>`;
+  return comm.name;
 }
 function concessionText(ev) {
   if (ev.eventType !== 'new_lease_signed' && ev.eventType !== 'renewal_signed') return '';

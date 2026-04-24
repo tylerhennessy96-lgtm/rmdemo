@@ -72,9 +72,6 @@
 
   <!-- ── Main ── -->
   <div class="main">
-    <div style="padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface);font-size:12px;color:var(--text-muted);">
-      <span style="color:var(--text-secondary);font-weight:500;">Note:</span> Term premiums apply only to short-term leases (2&ndash;9 months). Longer terms are priced at the standard rate.
-    </div>
     <div class="table-wrap" id="tableWrap">
       <table class="data-table" id="premiumTable">
         <thead>
@@ -383,12 +380,6 @@ function renderPremiumTable() {
     </td>`;
 
     for (let i = 0; i < 23; i++) {
-      // Terms 10+ are read-only 0% per policy — column index i maps to term
-      // (i + 2), so i > 7 corresponds to terms 10 through 24.
-      if (i > 7) {
-        cells += `<td style="background:#f9fafb;text-align:center;color:var(--text-muted);font-size:11.5px;padding:6px 2px;">0%</td>`;
-        continue;
-      }
       const propKey = _ppropkey(comm.id, i);
       const propChanged = propKey in propertyPremiumChanges;
       let propVal;
@@ -419,11 +410,6 @@ function renderPremiumTable() {
       btr.className = 'row-bedtype';
       let bcells = `<td class="term-name-cell">${bt.type}</td>`;
       for (let i = 0; i < 23; i++) {
-        // Terms 10+ are read-only 0% (same policy as the property row).
-        if (i > 7) {
-          bcells += `<td style="background:#f9fafb;text-align:center;color:var(--text-muted);font-size:11.5px;padding:6px 2px;">0%</td>`;
-          continue;
-        }
         const avail = getAvailForPremium(comm.id, bt.type, i);
         const key = _pkey(comm.id, bt.type, i);
         const prem = getPremium(comm.id, bt.type, i);
@@ -459,8 +445,7 @@ function checkSaveVisibility() {
 function saveChanges() {
   const count = Object.keys(premiumChanges).length;
   // Flush pending edits into the correct mode-specific array on TERM_DATA.
-  // Key format: `mode:commId:bedType:i`. Terms 10+ (i > 7) can't reach here
-  // since their cells are read-only, so the policy remains intact.
+  // Key format: `mode:commId:bedType:i`.
   Object.entries(premiumChanges).forEach(([k, val]) => {
     const [mode, commId, bedType, iStr] = k.split(':');
     const i = parseInt(iStr, 10);
